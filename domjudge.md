@@ -246,3 +246,62 @@ sudo docker run -d -it --privileged -v /sys/fs/cgroup:/sys/fs/cgroup --name judg
 ![](./img/domjudge-3.png)
 
 ![](./img/domjudge-4.png)
+
+
+
+### pol2dom 的安装以及使用
+
+#### 安装环境及其依赖
+
+```bash
+sudo apt install texlive-latex-base texlive-latex-extra
+sudo apt install texlive-lang-chinese
+sudo apt install texlive-fonts-recommended texlive-fonts-extra
+```
+
+```bash
+pip install webcolors
+pip3 install tqdm
+```
+
+
+
+#### 书写 config.yaml
+
+```bash
+contest_name: test
+
+front_page_statements: absolute_path/statements_frontpage.pdf # A single-page pdf
+front_page_solutions: absolute_path/solutions_frontpage.pdf # A single-page pdf
+header_image: absolute_path/header.pdf # A rectangular-shaped image (it can be in any format supported by \includegraphics in latex).
+
+polygon:
+  key: xxxx
+  secret: xxxx
+domjudge:
+  server: http://xxx/domjudge
+  username: admin
+  password: xxx
+  contest_id: xxx
+problems:
+- name: hello-minecraft
+  label: A
+  color: CornflowerBlue
+  polygon_id: 375741
+  author: Galaxy
+  preparation: Galaxy
+```
+
+> 这里的 polygon 的 key 和 secret 可以在 polygon 中的 `settings` 下的 `New API key` 中获得
+>
+> problems 中的 polygon_id 为 problem 中右边的 id 
+>
+> domjudge 中的 server 为你的 server
+>
+> username 需要为管理员
+>
+> password 需要为上述 username 的密码
+>
+> contest_id 为打开比赛网页时，上面的链接的数字
+>
+> 例如 `http://xxx/domjudge/jury/contests/2` 那么即为 2
