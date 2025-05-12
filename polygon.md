@@ -8,11 +8,74 @@
 
 
 
+### Files
+
+Files 包含三个部分: Resource Files, Source Files, Attachments。我们一般只需要处理 Source Files 即可。
+
+若想要题面能够生成为中文，则需要将 Files 里面的 statements.ftl 替换成下面的代码
+
+```tex
+\documentclass [11pt, a4paper, oneside] {article}
+\usepackage {CJK}
+\usepackage [T2A] {fontenc}
+\usepackage [utf8] {inputenc}
+\usepackage [english, russian] {babel}
+\usepackage {amsmath}
+\usepackage {amssymb}
+\usepackage <#if contest.language?? && contest.language="russian">[russian]<#elseif contest.language?? && contest.language="ukrainian">[ukrainian]</#if>{olymp}
+\usepackage {comment}
+\usepackage {epigraph}
+\usepackage {expdlist}
+\usepackage {graphicx}
+\usepackage {ulem}
+\usepackage {import}
+\usepackage{ifpdf}
+\ifpdf
+  \DeclareGraphicsRule{*}{mps}{*}{}
+\fi
+
+\begin {document}
+\begin{CJK}{UTF8}{gbsn}
+\contest
+{${contest.name!}}%
+{${contest.location!}}%
+{${contest.date!}}%
+
+\binoppenalty=10000
+\relpenalty=10000
+
+\renewcommand{\t}{\texttt}
+
+<#if shortProblemTitle?? && shortProblemTitle>
+  \def\ShortProblemTitle{}
+</#if>
+
+<#list statements as statement>
+<#if statement.path??>
+\graphicspath{{${statement.path}}}
+<#if statement.index??>
+  \def\ProblemIndex{${statement.index}}
+</#if>
+\import{${statement.path}}{./${statement.file}}
+<#else>
+\input ${statement.file}
+</#if>
+</#list>
+\end{CJK}
+\end {document}
+```
+
+
+
+Source Files 里面存放了你的 Validator, Checker, Generator 等文件，这里也是 Generator 的上传地方。
+
+
+
 ### Statement
 
+将上述 Files 的 statements.ftl 修改之后，就可以在这个部分写你的题面了。可以使用 `Edit with Preview` 查看实时渲染的结果。其中 `Name` 是你题面的标题，`Legend` 是你题面的主体部分，`Input format` 是你的输入格式，即题面渲染的 `Input` 部分，`Output format` 是你输出格式，即题面渲染的 `Output` 部分。`Notes` 是你解释样例的部分，或者对于题面特殊说明的部分。
 
-
-### Files
+若你想要题面上有样例，即 `Example`，请你继续往下查看，并且书写完 Validator, Checker, Generator (可选) 后在 `Tests` 部分详细了解。
 
 
 
@@ -240,10 +303,6 @@ int main(int argc, char* argv[]){
 	
 }
 ```
-
-
-
-
 
 
 
