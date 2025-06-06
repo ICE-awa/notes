@@ -119,6 +119,27 @@ inf.readEof(); //从输入中读入 EOF(文件结束标志)
 
 ```
 
+如果需要对形如 `x + y > 1` 等多变量或者一些特殊变量进行判断，可以使用
+
+```cpp
+ensure(situation); //保证 situation 中的条件。如果 situation 返回为 true，则 Validation Success，否则 Failed，但是不返回详细信息，只会返回 Validation Failed。
+ensuref(situation, message); //保证 situation 中的条件。如果 situation 返回为 true，则 Validation Success，否则 Failed，但是返回 message。
+```
+
+对于上述，可以参考以下例子：
+
+```cpp
+int a = inf.readInt(); //读入一个 int 类型整数
+int b = inf.readInt(1, 100, "b") //读入一个 1～100 的 int 类型整数
+ll c = inf.readLong(); //读入一个 ll 类型整数
+ll d = inf.readLong(1'000'000'000, 1'000'000'000'000, "d") //读入一个 1e9 ~ 1e12 的 ll 类型整数。注意 cf polygon 推荐如果数字超过 3 位，请使用 ' 进行分割。
+std::string s = inf.readWord(); //读入一个 string 类型字符串。
+
+ensure(a + b >= 1); //确保 a + b >= 1，但是如果校验失败不会返回详细信息。
+
+ensuref(c + d >= 1, "c + d should greater equal than 1"); //确保 c + d >= 1，但是如果校验失败会返回 "c + d should greater equal than 1"
+```
+
 
 
 **请注意，你的校验器 Validator 需要严格的读入空格和换行进行格式判断。**
@@ -288,6 +309,8 @@ int main(int argc, char *argv[]){
 
 ### Tests
 
+> 请尽量读完 Generator 和 Script 板块后再书写你的 Generator
+
 #### Generator
 
 Generator 用来生成数据，让出题者不需要手动输入数据，而是可以通过 polygon 直接生成。模板为
@@ -306,7 +329,153 @@ int main(int argc, char* argv[]){
 
 
 
+在 `testlib.h` 中，可以使用以下函数：
+
+```cpp
+rnd.next(4); //等概率生成一个 [0, 4) 范围内的整数
+rnd.next(4, 100); //等概率生成一个 [4, 100] 范围内的整数
+rnd.next(10.0); //等概率生成一个 [0, 10.0) 范围内的浮点数
+rnd.next("one | two | three"); //等概率从 one, two, three 三个串中返回一个
+rnd.any(container); //等概率返回一个具有随机访问迭代器 (e.g. std::vector, std::string) 的容器内的某一元素的引用
+rnd.wnext(i, t); //下面进行解释
+shuffle(); //接受一对迭代器，使用 rnd 打乱序列
+```
+
+关于 `rnd.wnext(i, t)` 的形式化定义为：
+$$
+wnext(i, t)=
+\begin{cases}
+next(i) & t = 0 \\
+max(next(i), wnext(i, t - 1)) & t > 0 \\
+min(next(i), wnext(i, t + 1)) & t < 0
+\end{cases}
+$$
+举个例子，`rnd.wnext(4, 2)` 等同于 `std::max(rnd.next(4), rnd.next(4));` 即这个函数是用来执行 $t$ 次 `rnd.next(i)` 并且取最大值。`rnd.wnext(4, -2)` 等同于 `std::min(rnd.next(4), rnd.next(4));` 即这个函数是执行 $-t$ 次 `rnd.next(i)` 并取最小值。
+
+即当 $t < 0$，调用 $-t$ 次 `rnd.next(i)` 并取最小值；当 $t > 0$，调用 $t$ 次 `rnd.next(i)` 并取最大值；当 $t = 0$ 则等同于 `next()`。
+
+
+
 #### Script
+
+Script 能够让你使用 **带命令行参数** 的 generator 来生成数据，而不是写一大堆 generator 或者每次生成数据时修改 generator。并且，只需要生成输入，不需要生成输出。
+
+脚本的形式为 `generator-name [params] > test-index`。例如我的 generator 名字为 ice_generator.cpp，参数为 `Tests, mxn, mxm` 等，我可以使用
+
+```
+ice_generator -Tests 2025 -mxn 200000 -mxm 200000 > 2
+```
+
+也可以使用 `generator-name [params] > $` 来自动指定测试点编号。上述例子可改为
+
+```
+ice_generator -Tests 2025 -mxn 200000 -mxm 200000 > $
+```
+
+
+
+**命令行参数** 即有时候你想要数据大小从小到大进行递增，例如第 2 个测试点我只想要 10 组多测，而第 3 个测试点我想要 100 组多测，则可以在 generator 中指定 $T$ 为一个命令行参数，在生成的时候可以调整其大小。
+
+假设，我想要命令行参数的名字为 `Tests`，若命令行中没有指定，则默认为 2025，我可以在 generator 中这样写：
+
+``` cpp
+int T = opt<int>("Tests", 2025);
+std::cout << T << "\n";
+```
+
+
+
+### Solution
+
+
+
+### Invocations
+
+
+
+### 对于整场比赛题面的生成
+
+请在 polygon 主页右边的 `Properties/Files` 中更改 `statements.ftl`
+
+![](./img/polygon-1.png)
+
+```tex
+\documentclass [11pt, a4paper, oneside] {article}
+\usepackage {CJK}
+\usepackage [T2A] {fontenc}
+\usepackage [utf8] {inputenc}
+\usepackage [english, russian] {babel}
+\usepackage {amsmath}
+\usepackage {amssymb}
+\usepackage <#if contest.language?? && contest.language="russian">[russian]<#elseif contest.language?? && contest.language="ukrainian">[ukrainian]</#if>{olymp}
+\usepackage {comment}
+\usepackage {epigraph}
+\usepackage {expdlist}
+\usepackage {graphicx}
+\usepackage {ulem}
+\usepackage {import}
+\usepackage{ifpdf}
+\ifpdf
+  \DeclareGraphicsRule{*}{mps}{*}{}
+\fi
+%这里开始内部的内容进行更改
+\begin{CJK}{UTF8}{gbsn}
+\title{2025 华南师范大学集训队筛选赛}
+\author{迫害小登小纵队}
+\date{2025.06.15}
+
+\begin {document}
+
+% 使用 titlepage 环境来自定义标题页
+\begin{titlepage}
+    \maketitle % 先输出标准的标题、作者、日期
+
+    % 在 \maketitle 下方添加一些垂直间距
+    \vspace{2cm} 
+
+    % 添加你的两句话，可以使用 \centering 来居中
+    \centering
+    \textbf{本场比赛并不保证题目顺序按照难度排序。}\par
+    \vspace{0.5cm} % 两句话之间加一点小间距
+    \textbf{本场所有题目标题，皆源自于历届集训队队伍之名。愿你以智慧之火，点亮属于自己的 XCPC 长空。}\par
+
+    % 如果希望这两句话在页面底部，可以这样做：
+    % \vspace*{\fill} % 弹性空白，将下面的内容推到底部
+    % \centering
+    % 这是第一句话。\par
+    % 这是第二句话。\par
+
+    \thispagestyle{empty} % titlepage 环境通常会自动设置此项，但显式写出无害
+\end{titlepage}
+%这以上的部分可以自由更改
+\contest
+{${contest.name!}}%
+{${contest.location!}}%
+{${contest.date!}}%
+
+\binoppenalty=10000
+\relpenalty=10000
+
+\renewcommand{\t}{\texttt}
+
+<#if shortProblemTitle?? && shortProblemTitle>
+  \def\ShortProblemTitle{}
+</#if>
+
+<#list statements as statement>
+<#if statement.path??>
+\graphicspath{{${statement.path}}}
+<#if statement.index??>
+  \def\ProblemIndex{${statement.index}}
+</#if>
+\import{${statement.path}}{./${statement.file}}
+<#else>
+\input ${statement.file}
+</#if>
+</#list>
+\end{CJK}
+\end {document}
+```
 
 
 
