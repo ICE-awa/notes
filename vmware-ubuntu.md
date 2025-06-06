@@ -107,7 +107,42 @@ systemctl enable ssh.service
 
 ### VPN 的配置 (以 clash 为例)
 
+在 bash 中执行以下命令，以在用户目录下创建 clash 文件夹
 
+```bash
+mkdir ~/clash
+cd ~/clash
+```
+
+在 `https://github.com/DustinWin/proxy-tools/releases/tag/Clash-Premium` 中下载 `clashpremium-release-linux-amd64.tar.gz`，并且执行
+
+```bash
+tar -zxvf clashpremium-release-linux-amd64.tar.gz
+```
+
+解压后将二进制产物重命名为 clash，并且将其移动过去。可以执行以下命令
+
+```bash
+sudo mv <你的产物名字> clash
+sudo mv clash ~/clash/
+```
+
+
+
+然后 cd 到 clash 二进制文件所在的目录，登录到 clash 的网站上，在 `下载与教程` 板块中复制 wget 命令
+
+执行完后，在 `~/clash` 目录下面执行
+
+```bash
+chmod +x clash
+./clash -d .
+```
+
+
+
+然后在 Ubuntu 的 Setting 当中的 Network 里，更改网络代理，将类型改为手动，然后将 `HTTP` 和 `HTTPS` 代理设置为 `127.0.0.1:7890`，`Socks` 主机为 `127.0.0.1:7891`
+
+![](./img/vmware-6.png)
 
 
 
