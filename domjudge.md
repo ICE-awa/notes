@@ -10,24 +10,32 @@ sudo apt-get upgrade
 ```
 
 ```bash
-sudo apt install acl zip unzip mariadb-server nginx php-fpm php-gd php-cli php-intl php-mbstring php-mysql php-curl php-json php-xml php-zip composer ntp
+sudo apt install acl zip unzip mariadb-server nginx php-fpm php-gd php-cli php-intl php-mbstring php-mysql php-curl php-json php-xml php-zip composer ntp -y
 ```
 
 ```bash
-sudo apt install make gcc g++ debootstrap libcgroup-dev lsof procps libcurl4-gnutls-dev libjsoncpp-dev libmagic-dev
+sudo apt install make gcc g++ debootstrap libcgroup-dev lsof procps libcurl4-gnutls-dev libjsoncpp-dev libmagic-dev -y
 ```
 
 ```bash
-sudo apt install pkg-config
+sudo apt install pkg-config -y
 ```
 
 ```bash
-sudo apt install python3-pip
+sudo apt install python3-pip -y
 ```
+
+如果你是 Ubuntu:
 
 ```bash
 pip install requests
 pip install jinja2 jsonpatch jsonschema
+```
+
+如果你是 Debian:
+
+```bash
+sudo apt install python3-requests python3-jinja2 python3-jsonpatch python3-jsonschema -y
 ```
 
 
@@ -346,15 +354,35 @@ sudo ./p2d.sh Testing_Round --polygon --convert --domjudge --pdf
 
 ### p2d 的使用
 
-p2d 是用来将 polygon 包转为 domjudge 包的一个工具。
+p2d 是用来将 polygon 包转为 domjudge 包的一个工具。先将 polygon 出的题目在 `Package` 中打包为 Full，并且下载对应的 linux 版本的包。
+
+在 bash 环境中执行
+
+```bash
+pip install p2d
+```
+
+即可使用 p2d，用法为
+
+```bash
+p2d --code <题号> --color "#000000" -o <输出的 domjudge 包的路径> <polygon 包的路径>
+```
+
+其中，`--color` 是可选的参数，无论是否使用都可以。`--code` 是 domjudge 对应的题号。假设我 polygon 包路径为 `~/problems/202501/polygon/A.zip`，我需要输出到 `~/problems/202501/domjudge/A.zip`，颜色为 `#123456`，那么我需要执行
+
+```bash
+p2d --code A --color "#123456" -o ~/problems/202501/polygon/A.zip ~/problems/202501/domjudge/A.zip
+```
 
 
+
+将对应的 domjudge 转换的包通过 domjudge jury 界面的 `Import/Export` 的 `Import archive` 导入。直接将刚才的压缩包放进去即可。
 
 
 
 ### 配置 CDS
 
-CDS (Contest Data Server)，用于比赛后台的管理服务，先配置好这个才能使用其他 Tools (除了 Resolver)
+CDS (Contest Data Server)，用于比赛后台的管理服务，先配置好这个才能使用其他 Tools。**请完成整个比赛题目的配置后再配置 CDS，否则你可能会看到多个相同题目 (例如 2 个 G 题) 的情况！**
 
 在需要运行 CDS 的机子上下载并安装好 [CDS](https://github.com/icpctools/icpctools/releases/download/v2.5.940/wlp.CDS-2.5.940.zip)
 
@@ -479,8 +507,82 @@ presentation 和其密码还是见 `accounts.yaml`，最后的 `name` 指的是�
 
 
 
+遇到中文乱码的话请在 bash 环境中运行
+
+```bash
+ICPC_FONT="Microsoft YaHei" ./client.bat https://<server ip>:8443/api/contests/<cid> presentation <presentation password> --name <client name> --display id
+```
+
+其中 `ICPC_FONT` 可以更改，在 Windows 环境下面实测使用 `SimSun-ExtB Changgui` 效果最好。
+
+
+
+### 配置 Resolver
+
+Resolver 是使用滚榜的工具，此工具是赛后再进行使用的。先使用 `awards.sh` 或者 `awards.bat` 将比赛进行打包，再使用 `resolver.sh` 或者 `resolver.bat` 进行滚榜。使用此工具前，请先在 Domjudge 上面 `Finalize` 比赛！！！
+
+
+
+首先，在终端中使用
+
+```bash
+./awards.sh
+```
+
+> 如果提示 Permission Denied，则在终端中
+>
+> ```bash
+> sudo chmod +x ./awards.sh
+> ```
+
+或者
+
+```bash
+./awards.bat
+```
+
+打开 awards 工具。
+
+![](./img/domjudge-6.png)
+
+在 url 中输入你上述 CDS 配置的 URL，即 `https://<server ip>:8443/api/contests/<cid>`。User 和 Password 也是上述 CDS 的 admin 账号以及密码。
+
+
+
+点击 Connect 后，会进入如下的界面，直接 `Save event feed` 和 `Save awards.json`。
+
+> 如果你想要更改奖牌数，请在**比赛时在 domjudge 进行更改！**
+
+请注意保存的位置！我这里保存的是 `./cdp` 文件夹中
+
+![](./img/domjudge-7.png)
+
+
+
+退出，在终端中执行
+
+```bash
+./resolver.sh ./cdp
+```
+
+即可进入滚榜程序。
+
+resolver 的键盘快捷键有：
+
+* `+/-` 用来调整滚榜速度。
+
+* `Space/f/鼠标左键` 用来下一步。
+
+请注意滚榜的时候，铁牌区是全自动滚榜的，其他的就是手动滚榜。
+
+
+
 ### 部分遇到的错误
 
 1. 在测试比赛的时候，发现提交代码后，重定向回 /domjudge/team/submit，但是 submission 中没有记录，且在控制台中发现所有 Network 的活动都为 200 码，排查 judgehost 也是全绿。
 
 ​	此问题也许是 domjudge 底层的问题，在搭建 domjudge 的机子中，无论是通过公网访问还是 127.0.0.1/domjudge 都无法正常提交。但是其他地方提交没有问题。
+
+
+
+2. Java 代码运行的时候，出现 Run-error 或者 Compile-Error，请在 Jury 页面右边的 Configuration settings --> Judging --> Process Limit 将其调大。例如将 Process Limit 从 64 调到 256 或者更大。
