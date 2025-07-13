@@ -492,3 +492,9 @@ std::cout << T << "\n";
 若 Checker 报错 `Wrong output format: Unexpected end of file - int32 expected`
 
 则是你的 Checker 循环逻辑出错，检查是否使用了 `ans.eof()` 或者 `ouf.eof()`，若有，请更改为 `ans.seekEof()` 或者 `ouf.seekEof()` 控制循环。 
+
+
+
+#### PDF 编译错误
+
+* 请把所有的 `\>` `\<` 替换成 `\tt{>}` 和 `\tt{<}`
