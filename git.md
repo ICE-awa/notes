@@ -73,6 +73,7 @@ git config --global credential.helper store
 git config --global --list
 ```
 
+<<<<<<< HEAD
 用于查看刚才配置的global变量，若使用`git config --list`则显示的是所有变量
 
 
@@ -619,3 +620,6 @@ gitGraph
     merge hotfix/cors-error
 ```
 
+=======
+用于查看刚才配置的global变量，若使用`git config --list`则显示的是所有变量
+>>>>>>> ca719b7 (update)

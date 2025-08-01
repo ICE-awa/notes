@@ -349,21 +349,25 @@ int b = (int) a; //这里就是显式转换
 
 
 
-#### 1.4 Java 变量的命名规则
+#### 1.4 Java 命名规则
 
 Java 变量是**大小写敏感的**，即 `amount`，`Amount`，`amouNt` 这三个是不同的变量。
 
-
-
 Java 的变量可以使用字母，数字，下划线 `_`，以及美元符号 `$` 进行组合，但首位不能是数字，变量名也不能是 Java 的保留关键字。
 
-
-
-Java 变量应该遵循小驼峰命名法，即从第二个单词开始，每个单词的首字母都需要大写。例如：`fullName`，`myStudentCourses`
-
-
+Java 变量应该**遵循小驼峰命名**法，即从第二个单词开始，每个单词的首字母都需要大写。例如：`fullName`，`myStudentCourses`
 
 请让你的变量名**有意义**，这样在团队协作中，其他人就能知道你的变量名是什么意思。例如你要写人名，那我们应该将变量命名为 `name` 而不是 `a` 或者 `xxx`。
+
+
+
+**以下三个后面会学到，你需要记住他们的命名规则**。
+
+Java 中的**方法**也应该遵循与变量一样的规则，**遵循小驼峰命名法**。
+
+Java 中的**类**应该要首字母大写，如果有多个单词，则应该**遵循大驼峰命名法**。即所有单词的首字母大写。
+
+Java 中的**常量**应该要用**全大写字母和下划线来命名**。
 
 
 
@@ -1144,7 +1148,6 @@ sum(9, 10, 11);
   }
   ```
 
-  
 
 
 
@@ -1159,6 +1162,8 @@ sum(9, 10, 11);
 ##### 1.9.2 方法的重载 (Overloading)
 
 **重载 (Overload)** 指的是在**同一个类中**，允许存在一个以上的**同名方法**，只要它们的**参数列表不同**即可。
+
+> 实际上，方法的重载也叫做编译时多态
 
 例如简单的计算器类：
 
@@ -1465,7 +1470,7 @@ public class Test {
 
 ##### 2.4.1 类的构造函数
 
-当我们执行例如 `Car car = new Car()` 的时候，实际上是调用了类的构造函数 `Car()`。但是我们类里面并没有这个函数啊？其实这个函数是 java 自动帮我们生成的，我们也将其称作**默认构造函数**。构造函数**一定是跟类同名的。**
+当我们执行例如 `Car car = new Car()` 的时候，实际上是调用了类的构造函数 `Car()`。但是我们类里面并没有这个函数啊？其实这个函数是当我们**没有手动指定构造函数**时， java 自动帮我们生成的，我们也将其称作**默认构造函数**。构造函数**一定是跟类同名的。**
 
 当我们使用默认构造函数创建新的对象时，它会将内部属性初始化为默认值，例如 int 会被初始化为 0 等等。
 
@@ -1836,7 +1841,159 @@ Child Constructor Called
 
 **从原理层面怎么理解呢？**（如果这部分看不懂，请直接跳转至 2.4.4 类的多态）
 
+实际上，**在任何一个类的构造方法中**，如果我们不主动写 `super(...)`，那么 Java 编译器会**自动**在构造方法的第一行中隐式的插入一句 `super();`。这个函数的意思是**调用父类的无参数构造方法**。
 
+也就是，对于上述代码，实际上 Java 编译器插入 super 后会变成：
+
+```java
+// GrandParent.java
+public class GrandParent {
+    public GrandParent() {
+        System.out.println("GrandParent Constructor Called");
+    }
+}
+```
+
+```java
+// Parent.java
+public class Parent extends GrandParent {
+    public Parent() {
+        super();
+        System.out.println("Parent Constructor Called");
+    }
+}
+```
+
+```java
+// Child.java
+public class Child extends Parent {
+    public Child() {
+        super();
+        System.out.println("Child Constructor Called");
+    }
+}
+```
+
+
+
+在内存中，当遇到 `new Child()` 指令时，它会立刻在**堆内存中，分配一整块连续的内存空间**，并且这块空间的大小，能够容纳**GrandParent 类，Parent 类以及 Child 类中定义的所有字段（成员属性及行为）**。
+
+然后会通过构造器链（即 super() 的调用），从上至下初始化内存。例如本例子就是一直追溯到 GrandParent 类然后初始化 GrandParent 类的那部分空间（例如给子段赋初始值），然后再继续 Parent 类的操作。
+
+
+
+并且一个有趣的事情是，`super` 实际上是一个关键字，指向父级，我们可以这样写：
+
+```java
+// Parent.java
+public class Parent {
+    public Parent() {
+        System.out.println("Parent Constructor Called");
+    }
+    public void parentMethod() {
+        System.out.println("Parent Method Called");
+    }
+}
+```
+
+```java
+// Child.java
+public class Child extends Parent {
+    public Child() {
+        System.out.println("Child Constructor Called");
+    }
+    public void childMethod() {
+        super.parentMethod();
+        System.out.println("Child Method Called");
+    }
+}
+```
+
+当我们执行 `child.childMethod()` 的时候，输出为：
+
+```
+Parent Method Called
+Child Method Called
+```
+
+
+
+那么问题来了，对于子类，我可不可以这样写：
+
+```java
+// Child.java
+public class Child extends Parent {
+    public Child() {
+        System.out.println("Child Constructor Called");
+    }
+    public void childMethod() {
+        System.out.println("Child Method Called");
+        // 这里的顺序进行了更改
+        super.parentMethod();
+    }
+}
+```
+
+答案是可以的，因为对象已经被创建了，输出就是：
+
+```
+Child Method Called
+Parent Method Called
+```
+
+
+
+当我们重载了父类的构造器，但是我们没有保留默认构造器的时候，就会出错，例如下面这个例子是错的：
+
+```java
+// Parent.java
+public class Parent {
+    private int age;
+    public Parent(int age) {
+        this.age = age;
+    }
+}
+```
+
+```java
+// Child.java
+public class Child extends Parent {
+    public Child() {
+      	
+    }
+}
+```
+
+编译器会报错，我们需要这样修改：
+
+```java
+// Parent.java
+public class Parent {
+    private int age;
+    public Parent(int age) {
+        this.age = age;
+    }
+    public Parent() {
+        this.age = 0;
+    }
+}
+```
+
+```java
+// Child.java
+public class Child extends Parent {
+    public Child(int age) {
+        super(age);
+    }
+    public Child() {
+ 		// 这里的 super(); 实际上编译器帮我们生成了       
+    }
+}
+```
+
+即我们有参数的构造器需要手动指定 `super([参数列表])`，不然编译器无法自动给我们生成构造函数。
+
+> 为什么这里我们要手动写无参数构造函数？这是因为当我们有**手动重载构造函数时**，Java 不会帮我们生成**默认构造函数了**。
 
 
 
@@ -1846,7 +2003,11 @@ Child Constructor Called
 
 ![](./img/Backend/java-7.png)
 
-当许多不同的对象，执行同一个操作或者方法时，会产生不同的执行结果。例如猫猫和狗勾都会叫，但是猫猫是喵喵叫，狗勾是汪汪叫。我们在 java 中，将其称之为**多态**。
+当许多不同的对象，执行同一个操作或者方法时，会产生不同的执行结果。例如猫猫和狗勾都会叫，但是猫猫是喵喵叫，狗勾是汪汪叫。我们在 java 中，将**同一操作作用于不同的对象，会产生不同的执行结果**称之为**多态**。对于方法**重载 (Overloading)**，我们称之为**编译时多态**，也叫**静态多态**；对于方法**重写 (Overriding)**，我们称之为**运行时多态**，也叫**动态多态**。我们通常在讨论面向对象 (OOP) 中的多态时，主要讨论的是动态多态，即下面所说的方法重写。
+
+> 因为方法重载一般是参数列表发生了改变，这是编译器来决定到底要执行那个函数。例如 sum(a, b) 和 sum(a, b, c)，所以叫做**编译时多态**。
+>
+> 方法重写一般是子类重写了父类的函数，在调用函数时是调用了子类重写的函数，在运行时才能看出来，所以叫做**运行时多态**。
 
 ```java
 // Animal.java
@@ -2232,7 +2393,288 @@ for(Animal pet : pets) {
 
 <span id = "classAbstraction"></span>
 
-##### 2.4.5 类的抽象
+##### 2.4.5 抽象类以及抽象函数
+
+如果我问你：“动物怎么叫？”在你不知道具体动物的前提下，你肯定也没有头脑。例如具体问的是狗勾还是猫猫？所以这时候我们要引入一个抽象类和抽象函数的概念。
+
+我们可以通过以下方式创建抽象类和抽象函数：
+
+```java
+public abstract class xxx {
+    public abstract void xxx();
+}
+```
+
+例如对于动物的例子，我们就可以这样写：
+
+```java
+public abstract class Animal {
+    public abstract void sayHello();
+}
+```
+
+我们会发现，这里面的 `sayHello()` 方法并没有方法体，那我们该怎么办呢？让我们回想以下最初的例子，我们是想要知道“动物怎么叫”，那么我们就需要知道具体的“动物”指的是什么，所以我们就要在具体的动物，也就是具体的子类之中实现。也就是**在子类中重写方法**。
+
+```java
+public class Dog extends Animal {
+    @Override
+    public void sayHello() {
+        System.out.println("woof!");
+    }
+}
+```
+
+当我问你，“狗勾怎么叫”的时候，你也就能答出来“汪汪叫”这样了。
+
+那么抽象类能不能在里面写正常的东西呢？答案是当然可以！例如动物们都要 zzz 的睡觉，我们就可以这样写
+
+```java
+public abstract class Animal {
+    public abstract void sayHello();
+    public void sleep() {
+        System.out.println("zzz");
+    }
+}
+```
+
+我们也同样可以给他设置个属性，并且设置他的 getter 和 setter，例如：
+
+```java
+public abstract class Animal {
+    public abstract void sayHello();
+    public void sleep() {
+        System.out.println("zzz");
+    }
+    private String name;
+    public String getName() {
+        return name;
+    }
+    public void setName(String name) {
+        this.name = name;
+    }
+}
+```
+
+请注意，**抽象函数只能写在抽象类中。**并且对于**类的访问权限仍然生效**。
 
 
+
+并且，我们**不能创建一个抽象类的对象**，但是**可以作为引用类型**，例如：
+
+```java
+Animal dog = new Dog(); // 这样是可以的
+Animal animal = new Animal(); // 这样是不行的，这个是一个抽象类，无法实例化
+```
+
+
+
+#### 2.5 Java 中的 static 关键词
+
+static 关键词意味着这个方法或者属性**是属于类本身的**，**而不是属于某一个实例的**。
+
+例如我想要统计学生的数量，我可以这样做：
+
+```java
+public class Student {
+    public static int count = 0;
+    public Student() {
+        count++;
+    }
+}
+```
+
+这样当我每调用一次 Student() 的构造函数时，count 就会 +1。因为 count 这个类型是属于类本身的，所以我们可以通过 Student.count 来调用。
+
+例如我想要固定下来每个学生的学校，我也可以这样做：
+
+```java
+public class Student {
+    public static String school = "SCNU";
+    public static int count = 0;
+    public Student() {
+        count++;
+    }
+}
+```
+
+我们当然也可以给方法添加上 static 关键词。例如：
+
+```java
+public class Student {
+    private static String school = "SCNU";
+    private static int count = 0;
+    public Student() {
+        count++;
+    }
+    public static int getCount() {
+		return count;
+    }
+    public static String getSchool() {
+        return school;
+    }
+}
+```
+
+这样做的好处是：这些变量和方法并不是每个实例特有的，我们不会在每次创建一个新的对象都创建一个对应的副本，所以我们可以节省内存。
+
+
+
+被 static 修饰的成员会在**类第一次被加载到 JVM 时执行，且只执行这一次**。
+
+但是请注意，**被 static 修饰的成员不能访问非 static 成员**。例如：
+
+```java
+public class Student {
+    private static String school = "SCNU";
+    private static int count = 0;
+    public Student() {
+        count++;
+    }
+    public static int getCount() {
+		return count;
+    }
+    public static String getSchool() {
+        return school;
+    }
+    // 这样是错的！
+    private int age;
+    public static int getAge() {
+        return age;
+    }
+}
+```
+
+因为 static 是属于类本身而不属于任何实例的，这个函数不知道你要获取谁的 age 变量。
+
+
+
+我们的 main 方法就是静态的。因为 JVM 需要在不创建任何对象的情况下，就能直接调用程序的入口。
+
+
+
+我们也可以直接在类中加入 static 代码块，一般用于某个类第一次加载时的初始化不止。例如服务器配置等：
+
+```java
+public class ServerConfig {
+    public static final int PORT;
+    public static final String ADDRESS;
+	// 这个就是 static 代码块，用法就是 static { ... }
+    static {
+        PORT = 8080;
+        ADDRESS = "127.0.0.1";
+    }
+}
+```
+
+
+
+进阶用法就是：
+
+```java
+public class School {
+    private static School instance;
+    private School() {
+        
+    }
+    public static School getInstance() {
+        if (instance == null) {
+            instance = new School();
+        }
+        return instance;
+    }
+}
+```
+
+这实际上是一个非常基础的设计模式 -- **单例设计模式**，即整个程序运行期间，最多只能存在一个实例。因为这里的 `School()` 构造函数是 private 的，所以外部无法调用这个的构造函数，这样设计的话就让我们只能通过 `School.getInstance()` 来调用实例。
+
+
+
+#### 2.6 Java 中的 Final 关键词
+
+##### 2.6.1 final 修饰变量
+
+当 final 修饰变量时，这个变量就变成了一个**常量**。你只有**一次**给它赋值的机会，之后它的值就不能再被改变。
+
+
+
+**当 final 修饰基本类型时**
+
+变量的值一旦被赋予，就不能再更改了。例如：
+
+```java
+public class Constants {
+    // 编译时常量，在声明时赋值
+    public final int DAYS_IN_A_WEEK = 7;
+    
+    // 运行时常量，可以在构造方法等地方赋值
+    public final long creationTime;
+    public Constants() {
+        this.creationTime = System.currentTimeMillis();
+    }
+}
+```
+
+我们可以同时使用 `final` 和 `static` 修饰同一个东西。我们通常把这类型的常量用**全大写字母和下划线命名**，例如上面的 `DAYS_IN_A_WEEK`，这是一种开发时候的规范。
+
+
+
+**当 final 修饰引用类型时**
+
+引用变量**本身不可变**，但是**对象内部的状态可以改变（前提是这个对象本身是可变的）**。
+
+我们可以将其比喻成：给你的宠物狗系上了一条**永不解开的牵引绳**，你**不能**让这个牵引绳栓其他宠物（即指向新的对象），但是宠物狗本身是可以吃饭长大摇尾巴的（即对象内部状态可变）。
+
+```java
+public final StringBuilder sb = new StringBuilder("Hello");
+sb.append(", World!"); // 这一步是合法的
+// sb = new StringBuilder("World"); // 这一步是不合法的，会导致编译错误
+```
+
+
+
+##### 2.6.2 final 修饰方法
+
+被 final 修饰的方法，**不能被任何子类重写 (Overriding)**。
+
+这是为了**锁定**一个方法的实现，防止子类在继承时重写这个方法，从而保证整个方法的**行为一致性**和**稳定性**。
+
+```java
+public class Animal {
+    public final void sleep() {
+		System.out.println("zzz");
+    }
+    public void eat() {
+        System.out.println("...");
+    }
+}
+```
+
+```java
+public class Dog extends Animal {
+    /*
+    以下代码是错误的，因为方法不能被重写了，这样会导致编译错误
+    @Override
+    public void sleep() {
+    	System.out.println("zzzzzz");
+    }
+    */
+    // 但是下面代码是可以的，即其他方法仍然可以正常被重写
+    @Override
+    public void eat() {
+        System.out.println("eating");
+    }
+}
+```
+
+
+
+##### 2.6.3 final 修饰类
+
+被 final 修饰的类，**不能被任何类继承**。
+
+这是**出于安全和设计的考虑**。当你确认一个类的实现已经非常完美，不希望任何人通过继承来修改它的行为时，就可以用 final 将其”封印“。例如 Java 中的 `String` 类以及所有的基本类型包装类 (`Integer`，`Double`) 等都是 final 的，这保证了它们**不可变**的特性，使得它们在多线程环境下使用非常安全。
+
+
+
+#### 2.7 Java 接口 (Interface)
 
