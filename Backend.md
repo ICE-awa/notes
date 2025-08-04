@@ -974,8 +974,7 @@ for (int i = 0; i < a.length; i++) {
 
 请注意这里是 `length` 而不是 `length()`，这个是数组对象的**属性**而不是**方法**。 
 
-
-
+> <span id = "toString"></span>
 > 一个有趣的问题：如果我的代码是如下书写的：
 >
 > ```java
@@ -2413,7 +2412,7 @@ public abstract class Animal {
 }
 ```
 
-我们会发现，这里面的 `sayHello()` 方法并没有方法体，那我们该怎么办呢？让我们回想以下最初的例子，我们是想要知道“动物怎么叫”，那么我们就需要知道具体的“动物”指的是什么，所以我们就要在具体的动物，也就是具体的子类之中实现。也就是**在子类中重写方法**。
+我们会发现，这里面的 `sayHello()` 方法并没有方法体，那我们该怎么办呢？让我们回想以下最初的例子，我们是想要知道“动物怎么叫”，那么我们就需要知道具体的“动物”指的是什么，所以我们就要在具体的动物，也就是具体的子类之中实现。也就是**在子类中重写方法**。并且，**父类的所有抽象函数，在子类必须都要实现**。
 
 ```java
 public class Dog extends Animal {
@@ -2678,3 +2677,626 @@ public class Dog extends Animal {
 
 #### 2.7 Java 接口 (Interface)
 
+我们之前提到类是对象的蓝图这个比喻，那么我们也可以将接口比喻成类的蓝图。
+
+接口里面**全部都是抽象方法以及常量**。Java 会自动将你写的方法转换为抽象方法以及常量，即下述写法是等价的：
+
+```java
+public interface test {
+    void fly();
+    int MAX_USERS = 100;
+}
+```
+
+```java
+public interface test {
+    public abstract void fly();
+    public static final int MAX_USERS = 100;
+}
+```
+
+我们一般采用上面的写法，因为在接口之中，所有的方法和变量都会自动被转换为抽象方法和常量，无论你是否加上 `public abstract` 或者 `public static final` 修饰。
+
+
+
+对于接口里的常量，我们当然可以将其当成接口的一部分，也可以当成子类的一部分。并且，当一个类需要实现某些接口时，就需要用到 implement 关键词。例如：
+
+```java
+public interface Animal {
+    int MAX_AGE = 150;
+    void eat();
+}
+```
+
+```java
+public class Dog implements Animal {
+	@Override
+    public void eat() {
+        System.out.println("Dog is eating.");
+    }
+}
+```
+
+```java
+public class Test {
+    public static void main(String[] args) {
+        Dog dog = new Dog();
+        System.out.println(Animal.MAX_AGE); // 我们可以将常量当作是接口的一部分
+        System.out.println(Dog.MAX_AGE);	// 也可以将常量当作是子类的一部分
+    }
+}
+```
+
+
+
+在 Java 8 之后，我们可以在接口中写**静态方法**，例如：
+
+```java
+public interface Animal {
+    int MAX_AGE = 150;
+    void eat();
+    static void info() {
+        System.out.println("This is Animal interface");
+    }
+}
+```
+
+我们可以通过
+
+```java
+Animal.info();
+```
+
+来调用接口的静态函数。接口的静态函数与类类似，都是属于其本身的。
+
+但我们要注意，接口的静态方法**只能接口本身调用，子类无法调用**。
+
+
+
+接口能够实现**“多重继承”**的效果。例如一个人只能是“人类”，但他可以同时拥有“驾驶证”，“厨师证”等等，他可以拥有几种不同的能力。对于鸭子，它是一种动物，同时他也可以游泳和飞。例如：
+
+```java
+public interface Flyable {
+    void fly();
+}
+```
+
+```java
+public interface Swimmable {
+    void swim();
+}
+```
+
+```java
+public class Duck extends Animal implements Flyable, Swimmable {
+    @Override
+    public void fly() {
+        System.out.println("flying");
+    }
+    
+    @Override
+    public void swim() {
+        System.out.println("swimming");
+    }
+}
+```
+
+
+
+在 Java 8 以后，接口有了一个新的关键词 `default`，它是接口里的**”可选升级包“**或者**”默认设置“**。我们可以使用 `default` 修饰一个方法，并且写出具体的实现，所有实现了这个接口的类都会拥有这个方法。例如：
+
+```java
+public interface Animal {
+    default void sleep() {
+        System.out.println("Animal is sleeping.");
+    }
+}
+```
+
+这样子任何一个实现了 Animal 这个接口的类都拥有 sleep 方法。假设有一个 Dog 类，那么我们就可以通过 `dog.sleep()` 来调用这个方法。
+
+为什么叫这个为”可选升级包“呢，因为这个方法在子类中仍然可以**被重写 (Overriding)**，例如：
+
+```java
+public class Dog implements Animal {
+    @Override
+    public void sleep() {
+        System.out.println("Dog is sleeping.");
+    }
+}
+```
+
+当多个接口的默认方法冲突时，Java 会强制让你进行重写方法，来明确解决这个冲突。例如：
+
+```java
+public interface Radio {
+    default void turnOn() {
+        System.out.println("收音机打开了");
+    }
+}
+```
+
+```java
+public interface Speaker {
+    default void turnOn() {
+        System.out.println("音箱打开了");
+    }
+}
+```
+
+```java
+public class SmartSpeaker implements Radio, Speaker {
+    // 这里是必须要写的，不然会编译错误
+    @Override
+    public void turnOn() {
+        // xxx
+    }
+}
+```
+
+那么为什么我们需要有**默认方法**呢？我们可以想象一个场景，Java 中的 `List` 是一个非常核心的接口，在全世界有许多个类都实现了它，例如 `ArrayList`, `LinkedList`，以及许多公司实现的其他类。在 Java 8 前，`List` 接口没有 `forEach()` 这个遍历的方法，如果现在 Java 的设计师想要给 `List` 增加一个新功能 `forEach()`，假设没有默认方法，我们就要强迫全世界的程序员去修改它们的旧代码，这个是不可接受的。因为这产生了一个问题：**”接口一旦发布就难以进化“**。
+
+所以默认方法的作用是**向后兼容性**，允许接口在不破坏已有实现类的情况下，增加新的功能。
+
+
+
+Java 接口最重要的能力是**解耦合**，这能够让我们程序模块之间**面向协议编程，而不是面向实现编程。**因为接口里面所有的方法都是抽象方法，所以实现这个接口的类**一定包含这个接口定义的所有方法**，那么我们可以利用类似我们在类中学到的**向上转型**来实现解耦合。
+
+例如在 Java 中，`List` 是一种接口，而 `ArrayList` 和 `LinkedList` 就是这个接口的两个不同的实现。`ArrayList` 查询快，增删慢。`LinkedList` 查询慢，增删快。我们一般会根据不同的需求来使用不同的 list，但假设我们有一个函数需要接收这两种类型，我们就可以面向 `List` 这个协议编程。例如：
+
+```java
+public class test {
+    public static void printList(List<String> anyList) {
+        for(String item : anyList) {
+            System.out.println(item);
+        }
+    }
+    public static void main(String args[]) {
+        List<String> listA = new ArrayList<>();
+        List<String> listB = new LinkedList<>();
+        // 假设这里插入了许多数据
+        // ...
+        // 这里是关键，printList 可以处理任何一种 List
+        printList(listA);
+        printList(listB);
+    }
+}
+```
+
+
+
+#### 2.8 Java 内部类 (Inner Class)
+
+内部类，官方称为**嵌套类 (Nested Classes)**。在一个大项目中，我们通常会写很多类，有的时候，某个“辅助类”的存在，完全是为了服务于另一个“主类“的。如果将其单独放在外面，会显得很零散，而且可能会被不相关的类误用。这时候，将其放到”主类”里，就有两大好处：
+
+1. **逻辑上的组织和封装**
+   * “引擎”这个东西，逻辑上就是“汽车”的一部分。把 `Engine` 类放在 `Car` 类内部，能非常清晰地体现“从属”关系，让代码关系更清晰
+   * 内部类可以被声明为 `private`，这样除了它的外部类，其他类完全不知道这个类的存在，实现了更彻底的隐藏和封装。
+2. **更紧密的访问权限**
+   * **非静态**的内部类，可以**直接访问**其外部类实例的所有成员，包括 `private` 成员。
+   * 就像汽车的“引擎”可以直接连接到汽车“私有的”油箱和仪表盘一样，我们可以在不把外部类成员声明为 `public` 的前提下，使用外部类成员。
+
+
+
+内部类一般分为两大类，共四种：
+
+* **静态内部类**
+* **非静态内部类**
+  * 成员内部类
+  * 局部内部类
+  * 匿名内部类
+
+
+
+##### 2.8.1 静态内部类
+
+在类内部，用 `static` 修饰的内部类叫做静态内部类。它与外部类的关系，更像是一个“恰好被放在”外部类里的**普通类**，知识为了方便组织。
+
+**它不依赖于外部类的任何具体实例**。也就是说，你可以不创建外部类，直接创建内部类。因此，它**不能**访问外部类的**非静态成员**，**只能**访问内部类的**静态成员**。
+
+```java
+public class Car {
+    private String model;
+    private static int carCount = 0;
+    
+    public static class Engine {
+        public void showInfo() {
+            // 可以访问外部类的静态成员
+            System.out.println("已生产汽车：" + carCount + "辆");
+            
+            // 但是不能访问外部类的非静态成员
+            // System.out.println(model); // 编译错误
+        }
+    }
+}
+```
+
+```java
+// 使用时，可以不需要外部类实例，直接创建。例如
+Car.Engine engine = new Car.Engine();
+engine.showInfo();
+```
+
+
+
+##### 2.8.2 成员内部类
+
+**它的存在，必须依赖一个外部类的具体实例**。例如引擎不能脱离汽车而独立存在。
+
+它可以**无条件访问**外部类实例的所有成员，包括 `private`。
+
+```java
+public class Car {
+    private String model;
+    private int speed = 0;
+    
+    public class Engine {
+        public void start() {
+            System.out.println("汽车型号为：" + model + "的车启动了");
+            Car.this.speed = 10; // Car.this 可以明确指代外部类实例
+        }
+    }
+}
+```
+
+```java
+// 使用时，必须要先有外部类实例，再创建内部类。
+Car myCar = new Car();
+Car.Engine myEngine = myCar.new Engine(); // 这个语法比较特殊
+myEngine.start();
+```
+
+
+
+##### 2.8.3 局部内部类
+
+它的**生命周期和作用域仅限于这个方法**，一般是临时的类。但是它可以访问外部类的所有成员，以及所在**方法中**被 `final` 修饰的局部变量以及”事实上的 final 变量“。
+
+> ”事实上的 final 变量“指的是虽然你没有明确地使用 `final` 修饰，但它的行为和效果**等同于**一个 `final` 变量。即被初始化赋值之后，**再也没有被重新赋值过**。
+
+```java
+public class Car {
+    public void startJourney() {
+        final String destination = "SCNU";
+        
+        class Navigator {
+            public void guide() {
+                System.out.println("开始前往" + destination);
+            }
+        }
+        
+        Navigator navigator = new Navigator();
+        navigator.guide();
+    }
+}
+```
+
+至于上述所说的，“事实上的 final 变量”，下述是满足的：
+
+```java
+public class Test {
+    public void myMethod() {
+        String message = "Hello!"; // 这个变量从来没有重新赋值，所以它是“事实上的 final 变量”
+        
+        class Inner {
+            public void sayHi() {
+                System.out.println(message);
+            }
+        }
+        
+        Inner inner = new Inner();
+        inner.sayHi();
+    }
+}
+```
+
+但下述是不满足的：
+
+```java
+public class Test{
+    public void myMethod() {
+        String message = "Hello!";
+        
+        message = "Hello, World!"; // 这里重新赋值了，所以 message 不再是 “事实上的 final 变量了”
+        
+        class Inner {
+            public void sayHi() {
+                // 编译器会在这里报错
+                System.out.println(message);
+            }
+        }
+        
+        Inner inner = new Inner();
+        inner.sayHi();
+    }
+}
+```
+
+
+
+那么从原理上，我们该如何理解为什么只能访问 final 修饰的变量以及“事实上的 final 变量”呢？
+
+首先，局部变量的生命周期比较短。因为方法的局部变量是存放在**栈内存**上的，当方法执行结束，对应栈帧弹出，这个变量就会立刻被销毁。
+
+但是内部类创建的对象实例，是存放在**堆内存**上的。生命周期一般比局部变量比较长。
+
+对于上述例子，这就出现了一个问题，如果 `myMethod()` 方法已经执行完了，栈上的 `message` 变量已经被销毁了。但此时 `Inner` 实例化的对象还活着。那么，当这个对象调用 `sayHi()` 方法时，它去哪里找哪个早就不存在的 `message` 变量呢？
+
+答案是：复制一份。即 Java 编译器在创建内部类实例的时候，并不是让内部类直接引用栈上的局部变量，而是**把这个局部变量的值“复制”了一份**，作为内部类对象的一个隐藏的、合成的字段，存放在堆内存里。
+
+问题又来了，既然是复制，那么为什么原件不允许修改呢？
+
+答案是：为了保证数据的一致性。例如某个任务是让你去北京，你的上级给了你一张纸条，上面写着你要去北京（复制）。规定你一旦出发，就不能再更改办公室中原始纸条的指令，例如让你去广东。否则，两个人手里的信息就不一致了，任务就会出问题了。
+
+
+
+##### 2.8.4 匿名内部类
+
+它是一种**没有名字**的局部内部类，一般是**一次性的、用完就扔的适配器**。
+
+通常需要**立刻**创建一个接口或抽象类的子类对象时使用，比较方便。
+
+但是它的语法很抽象，语法是这样的：
+
+```java
+new 父类名或者接口名() {
+    // 类的实现体
+}; // 注意这里的分号，因为整个表达式通常是作为一条语句的一部分。
+```
+
+举个栗子：
+
+```java
+public interface Heater() {
+    void heat();
+}
+```
+
+```java
+public class Test {
+    public static void main(String[] args) {
+        Heater myHeater = new Heater() {
+            @Override
+            public void heat() {
+				System.out.println("开始加热");
+            }
+        }; // 整个 new Heater() { ... } 是一个表达式，用来赋值给 myHeater
+        myHeater.heat();
+    }
+}
+```
+
+它的访问规则与局部内部类一样，可以访问外部类的所有成员，也可以访问**所在作用域中**被 final 修饰的局部变量，以及所有“事实上的 final 变量”
+
+当然我们也可以使用 Lambda 表达式来简化，例如下面两个例子是等价的：
+
+```java
+Runnable r = new Runnable() {
+    @Override
+    public void run() {
+        System.out.println("Hello!");
+    }
+};
+```
+
+```java
+Runnable r = () -> System.out.println("Hello!");
+```
+
+
+
+经典应用场景（创建并启动线程）：
+
+```java
+public class ThreadExample {
+    public static void main(String[] args) {
+        Thread myThread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                System.out.println("新线程启动！");
+            }
+        });
+        
+        myThread.start();
+    }
+}
+```
+
+
+
+##### 2.9 Java 中的异常捕获与处理
+
+Java 中一共有三种错误，分别是：
+
+* **语法错误 (Syntax Error)**：也叫**编译时错误**，指的是你的代码不符合 Java 的语法规范，例如每行代码后面没有打分号等等。
+* **逻辑错误 (Logical Error)**：运行时和编译时的整个过程中都没有任何错误，但是最后的结果确实错的。例如计算圆的面积时，我们错误的使用了 $2 \times \pi \times r$ 而不是 $\pi \times r^2$。这个错误并不是程序的错误，而是**人**的错误。
+* **运行时错误 (Runtime Error)**：你的代码在语法上是完全正确的，也能够成功编译，但是在**程序运行过程中**，由于某些特殊情况或者非法操作（例如 `10 / 0`），导致程序无法继续执行下去而意外终止的错误。通常表现为**异常 (Exception)**，本节所讲的异常捕获也是围绕运行时错误的异常捕获来进行的。
+
+
+
+**异常**指的是一种会打断正常程序运行的**事件**，它是一个在运行时被抛出的对象。
+
+正常情况下，当异常出现时，程序会被强行终止。但是在我们平时运行的过程中，我们并不想让程序直接终止，而是处理这个异常之后继续运行这个程序，这时候就是**异常处理**发挥作用的时候。
+
+
+
+异常处理的核心就是 `try-catch-finally` 代码块。它的用法是：
+
+* `try` 代码块：你需要把**所有你觉得可能会出问题（抛出异常）的代码**，放进 `try` 的大括号里面。
+
+* `catch` 代码块：catch 紧跟在 try 后面，用于捕获并处理特定类型的异常。它的括号里 `(ExceptionType e)` 声明了它捕获哪一种异常。当对应的异常出现了，catch 块中的代码就会执行。
+  **你可以有多个 catch 块，来捕获并且处理不同类型的异常**。
+
+  > 在写多个 catch 块时，必须把**更具体的异常类型**放在**更通用的异常类型的前面**，否则，具体的异常会被通用的异常提前“拦截”，导致代码无法编译。
+
+* `finally` 代码块：`finally` 块是**可选的**，但当你写了之后，这里面的代码**一定会执行**，无论是 `try-catch` 正常执行，还是中途抛出异常被 `catch` 捕获，甚至程序崩溃，`finally` 都会执行。
+
+
+
+例如我们上述的某某数字 / 0 这个错误，我们就可以通过下面这个写法避免程序崩溃：
+
+```java
+public class Test{
+    public static int divide(int a, int b) {
+        try {
+            return a / b;
+        } catch (ArithmeticException e) {
+            System.out.println(e);
+            return -1;
+        }
+    }
+    public static void main(String[] args) {
+        System.out.println(divide(10, 2));
+        System.out.println(divide(10, 0));
+    }
+}
+```
+
+这样，上述代码的输出为：
+
+```
+5
+java.lang.ArithmeticException: / by zero
+-1
+```
+
+其中，`ArithmeticException` 就是算术异常，是 java 中的一种异常。
+
+> 如果你看了之前我们说的，当我们使用 System.out.println() 输出一个数组的引用对象时，会出现类似 `[I@15db9742` 这样的东西，就知道实际上这个是 Java 中 Object 类的 toString() 方法。如果你没有看过，可以[点此回顾](#toString)。
+>
+> 那么在这里，为什么我们可以直接用 System.out.println() 输出一个异常呢？实际上，是因为异常的一个祖父类 `Throwable` 中重写了 toString() 方法。方法如下：
+>
+> ```java
+> @Override
+> public String toString() {
+>     String s = getClass().getName();
+>     String message = getLocalizedMessage();
+>     return (message != null) ? (s + ": " + message) : s;
+> }
+> ```
+>
+> 这一段就能对应上我们上面的输出：`java.lang.ArithmeticException: / by zero`。其中，`java.lang.ArithmeticException` 代表对应的类名，即 ArithmeticException 类，后面跟的信息是具体的异常信息。
+
+
+
+再来一个 ai 写的栗子：
+
+```java
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
+
+public class ExceptionHandlingExample {
+    public static void main(String[] args) {
+        BufferedReader reader = null; // 先在外面声明，以便 finally 能访问到
+        
+        System.out.println("程序开始，准备读取文件...");
+
+        // --- 危险作业区 ---
+        try {
+            reader = new BufferedReader(new FileReader("一个不存在的文件.txt"));
+            String line = reader.readLine();
+            while (line != null) {
+                System.out.println(line);
+                line = reader.readLine();
+            }
+        } 
+        // --- 应急预案 A (针对“找不到文件”这种具体事故) ---
+        catch (FileNotFoundException e) {
+            System.out.println("【错误】文件不存在！请检查你的文件路径。");
+            // e.printStackTrace(); // 打印详细的错误堆栈信息，方便调试
+        }
+        // --- 应急预案 B (针对其他所有IO相关的事故) ---
+        catch (IOException e) {
+            System.out.println("【错误】读取文件时发生IO错误！");
+        }
+        // --- 最终清理工作 ---
+        finally {
+            System.out.println("Finally 块被执行了，开始清理资源...");
+            try {
+                if (reader != null) {
+                    reader.close(); // 确保文件读取器被关闭
+                    System.out.println("文件读取器已成功关闭。");
+                }
+            } catch (IOException e) {
+                System.out.println("【错误】关闭文件读取器时也发生了错误！");
+            }
+        }
+        
+        System.out.println("程序执行完毕。");
+    }
+}
+```
+
+
+
+有的时候，我们很难定位到问题具体出在哪里。例如下面的例子：
+
+```java
+public class Test {
+    public static void level1() {
+        level2();
+    }
+    
+    public static void level2() {
+        level3();
+    }
+    
+    public static void level3() {
+        int[] arr = new int[5];
+        arr[5] = 10; // 这一步是有问题的，数组越界了
+    }
+    
+    public static void main(String[] args) {
+        level1();
+    }
+}
+```
+
+运行之后，java 会报错：
+
+```
+Exception in thread "main" java.lang.ArrayIndexOutOfBoundsException: Index 5 out of bounds for length 5
+	at Test.level3(Test.java:12)
+	at Test.level2(Test.java:7)
+	at Test.level1(Test.java:3)
+	at Test.main(Test.java:16)
+```
+
+这一段报错，从上至下告诉了我们具体报错的原因，以及报错的函数在哪里，然后这个报错的函数被谁调用等等，这样就有了一个很清晰的报错链。但当我们使用 try-catch 代码块捕获异常的时候，会发生什么呢？
+
+将代码修改成：
+
+```java
+public class Test {
+    public static void level1() {
+        level2();
+    }
+    
+    public static void level2() {
+        level3();
+    }
+    
+    public static void level3() {
+        int[] arr = new int[5];
+        arr[5] = 10; // 这一步是有问题的，数组越界了
+    }
+    
+    public static void main(String[] args) {
+        try {
+            level1();
+        } catch (Exception e) {
+            System.out.println(e);
+        }
+    }
+}
+```
+
+就会输出：
+
+```
+java.lang.ArrayIndexOutOfBoundsException: Index 5 out of bounds for length 5
+```
+
+我们会发现少了许多详细信息，那些详细信息叫做**堆栈追踪 (Stack Trace)**，能够帮助我们找到**错误发生的正确位置（文件名+行号）**，并且展示了**方法调用的完整链条**。
