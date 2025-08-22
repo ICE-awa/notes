@@ -884,7 +884,7 @@ if ( 条件语句 1 ) {
 
 
 
-Java 中也有 `switch case` 的语句，用法与 C 类似，也要注意每个 case 之后都要 break，只不过需要加上大括号。即：
+Java 中也有 `switch case` 的语句，用法与 C 类似，也要注意每个 case 之后**都要 break**，只不过需要加上大括号。即：
 
 ```java
 switch ( 变量 ) {
@@ -899,6 +899,33 @@ switch ( 变量 ) {
     default: {
         语句 3
     }
+}
+```
+
+
+
+在 Java 12 之后，switch case 块可以这样写：
+
+```java
+switch () {
+	case xxx -> {
+        
+    }
+    case xxx -> {
+        
+    }
+}
+```
+
+这里用了 `->` 代替 `:`，并且每个块后面**不用再写 break 了**。
+
+并且 Java 12 之后，switch case 块可以给变量赋值，例如：
+
+```java
+int res = switch (day) {
+    case "MONDAY" -> 1;
+    case "TUESDAY" -> 2;
+    default -> 0;
 }
 ```
 
@@ -1324,8 +1351,81 @@ BOB
 
 
 
+#### 1.10 Java 中 Math 库的一些函数
 
-### 2 Java 进阶篇
+|       代码       |            含义            |
+| :--------------: | :------------------------: |
+| `Math.max(a, b)` |  返回两个数字中大的那个数  |
+| `Math.min(a, b)` |  返回两个数字中小的那个数  |
+|  `Math.abs(x)`   |      返回数字的绝对值      |
+|  `Math.ceil(x)`  |   返回浮点数的向上取整值   |
+| `Math.floor(x)`  |   返回浮点数的向下取整数   |
+| `Math.round(x)`  | 返回浮点数四舍五入后的整数 |
+|  `Math.sqrt(x)`  |     返回 x 开根后的数      |
+| `Math.pow(x, y)` |     返回 $x^y$ 的结果      |
+|  `Math.log(x)`   |    返回 $log_ex$ 的结果    |
+| `Math.log10(x)`  |    返回 $lg\ x$ 的结果     |
+|    `Math.PI`     |     返回 $\pi$ 的结果      |
+| `Math.random()`  |  返回 $0 \sim 1$ 的随机数  |
+
+
+
+#### 1.11 Java Lambda 表达式
+
+简单来说，**Lambda 表达式是一段可以被传递的匿名代码块**。**Lambda 表达式最大的优点就是：【简洁】**。
+
+Lambda 表达式的完整语法可以分为三个部分：
+
+```
+(参数列表) -> { 方法体 }
+```
+
+1. **参数列表 (Parameters)**：就是那个抽象方法需要接收的参数。
+2. **箭头符号 `->`**：这是 Lambda 操作符，用来分隔参数和方法体，可以读作 "goes to"。
+3. **方法体 (Body)**：就是你具体要执行的代码逻辑，也就是对抽象方法的实现。
+
+这个“三件套”还有很多可以简化的“语法糖”哦，让小橘给你一一道来：
+
+- **参数类型可以省略**：大多数情况下，编译器能根据上下文推断出参数类型，所以你可以不写。
+
+  Java
+
+  ```
+  // 完整版
+  Comparator<String> comp = (String s1, String s2) -> { return s1.length() - s2.length(); };
+  // 省略参数类型
+  Comparator<String> comp = (s1, s2) -> { return s1.length() - s2.length(); };
+  ```
+
+- **如果只有一个参数，小括号 `()` 也可以省略**：
+
+  Java
+
+  ```
+  // 比如 Consumer 接口的 accept(T t) 方法
+  Consumer<String> printer = (s) -> System.out.println(s);
+  // 省略小括号
+  Consumer<String> printer = s -> System.out.println(s);
+  ```
+
+- **如果方法体只有一句代码，大括号 `{}` 和 `return` 关键字（如果需要返回值的话）都可以省略**：
+
+  Java
+
+  ```
+  // 我们最开始的 Comparator 例子
+  // 完整版
+  Comparator<String> comp = (s1, s2) -> { return s1.length() - s2.length(); };
+  // 省略大括号和 return
+  Comparator<String> comp = (s1, s2) -> s1.length() - s2.length();
+  ```
+
+掌握了这些简化规则，你就能写出非常优雅的 Lambda 表达式啦！
+
+
+
+
+### 2. Java 提高篇
 
 > 本节中，2.1 与 2.2 在教材上一般不会提到，但是若想就业或者了解底层原理，可以稍作学习。
 
@@ -2467,6 +2567,196 @@ Animal animal = new Animal(); // 这样是不行的，这个是一个抽象类�
 
 
 
+##### 2.4.6 Java 中类的一些注解
+
+在 lombok 中，有着 `@Data`，`@NoArgsConstructor` 和 `@AllArgsConstructor` 的注解。
+
+`@NoArgsConstructor` 注解能够让 Lombok 自动为这个类生成一个**不带任何参数的公开的构造器**。例如：
+
+```java
+import lombok.NoArgsConstructor;
+
+@NoArgsConstructor // 加上这个就搞定啦！
+public class Cat {
+    private String name;
+    private int age;
+
+    // 这里空空如也，但实际上已经有了一个 public Cat() {} 构造器
+}
+
+// 你可以这样创建一个实例
+Cat myCat = new Cat(); // 完全没问题！
+```
+
+
+
+`@AllArgsConstructor` 注解能够让 Lombok 自动为这个类**生成一个全参数的构造器**。例如：
+
+```java
+import lombok.AllArgsConstructor;
+
+@AllArgsConstructor // 喵~ 所有字段都到碗里来！
+public class Cat {
+    private String name;
+    private int age;
+
+    // 看不见的代码，但它真实存在：
+    // public Cat(String name, int age) {
+    //     this.name = name;
+    //     this.age = age;
+    // }
+}
+
+// 你可以这样方便地创建并初始化一个实例
+Cat myCat = new Cat("小橘", 2); // 一行搞定！
+```
+
+
+
+`@Data` 实际上包含了以下所有注解：
+
+* `@Getter`：为所有字段生成 `get` 方法。
+* `@Setter`：为所有非 `final` 字段生成 `set` 方法。
+* `@ToString`：生成一个很棒的 `toString()` 方法，会打印出类名和所有字段的值。
+* `@EqualsAndHashCode`：生成 `equals()` 和 `hashCode()` 方法，用于比较对象。
+* `@RequiredArgsConstructor`：会为所有被 `final` 修饰的、或者被 `@NonNull` 注解标记的字段生成一个构造器。这个稍微特殊一点，但也很实用。
+
+以下两个代码是等价的：
+
+```java
+import lombok.Data;
+
+@Data // 看！一个注解就替代了上面所有代码！
+public class Cat {
+    private String name;
+    private int age;
+}
+```
+
+```java
+import java.util.Objects;
+
+public class Cat {
+    private String name;
+    private int age;
+
+    // 手动写构造器
+    public Cat(String name, int age) {
+        this.name = name;
+        this.age = age;
+    }
+
+    // 手动写 getter 和 setter
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+    public int getAge() { return age; }
+    public void setAge(int age) { this.age = age; }
+
+    // 手动写 equals 和 hashCode
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Cat cat = (Cat) o;
+        return age == cat.age && Objects.equals(name, cat.name);
+    }
+    @Override
+    public int hashCode() {
+        return Objects.hash(name, age);
+    }
+
+    // 手动写 toString
+    @Override
+    public String toString() {
+        return "Cat{" +
+                "name='" + name + '\'' +
+                ", age=" + age +
+                '}';
+    }
+}
+```
+
+
+
+上面的 `@RequiredArgsConstructor` 作用是**专门为被标记为“必需”的字段生成一个构造器。**即给所有使用 `final` 关键字以及被 Lombok 中的 `@NonNull` 注解的所有属性生成构造器。
+
+```java
+import lombok.Getter;
+import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
+import lombok.Setter;
+
+@Getter
+@Setter // age 是可变的，所以需要 setter
+@RequiredArgsConstructor // 喵！主角登场！
+public class Cat {
+
+    // 必需字段 1: final 修饰，必须在构造时赋值
+    private final String id;
+
+    // 必需字段 2: @NonNull 修饰，也必须在构造时赋值
+    @NonNull
+    private String name;
+
+    // 可选字段: 普通字段，不包含在 "RequiredArgs" 里
+    private Integer age;
+
+    // --- 以下是 Lombok 在背后为你生成的代码 ---
+    /*
+    public Cat(String id, @NonNull String name) {
+        // @NonNull 会自动帮你加
+        if (name == null) {
+            throw new NullPointerException("name is marked non-null but is null");
+        }
+        this.id = id;
+        this.name = name;
+    }
+    */
+}
+```
+
+```java
+public class Main {
+    public static void main(String[] args) {
+        // 只能通过这个包含 id 和 name 的构造器来创建
+        // age 字段被忽略了
+        Cat myCat = new Cat("橘-001", "橘子");
+
+        // 因为 age 是可选的，我们可以之后再设置它
+        myCat.setAge(2);
+
+        System.out.println("猫咪 ID: " + myCat.getId());       // 输出: 猫咪 ID: 橘-001
+        System.out.println("猫咪名字: " + myCat.getName()); // 输出: 猫咪名字: 橘子
+        System.out.println("猫咪年龄: " + myCat.getAge());   // 输出: 猫咪年龄: 2
+
+        // 下面这行代码会报错，因为没有提供无参构造器
+        // Cat anotherCat = new Cat(); // 编译错误！
+
+        // 这行代码也会报错，因为没有提供全参构造器
+        // Cat anotherCat = new Cat("橘-002", "柚子", 3); // 编译错误！
+    }
+}
+```
+
+但是，`@Data` 注解其实包含了 `@RequiredArgsConstructor`。
+
+所以，如果我们把上面例子中的 `@Getter`、`@Setter`、`@RequiredArgsConstructor` 全部换成一个 `@Data`，效果是完全一样的！
+
+```java
+import lombok.Data;
+import lombok.NonNull;
+
+@Data // 一个顶过去好几个！
+public class Cat {
+    private final String id;
+    @NonNull
+    private String name;
+    private Integer age;
+}
+```
+
+
+
 #### 2.5 Java 中的 static 关键词
 
 static 关键词意味着这个方法或者属性**是属于类本身的**，**而不是属于某一个实例的**。
@@ -2863,6 +3153,35 @@ public class test {
 }
 ```
 
+> 这里解释一下编程中一个很重要的思想 -- "**高内聚，低耦合**"
+>
+> 
+>
+> **高内聚** 可以用一句话来理解 “**物以类聚，人以群分**”。
+>
+> 它的核心思想是：一个模块的内部，各个元素之间的关联度应该非常高。简单来说，就是**把功能紧密相关的东西，放在一起**。
+>
+> 来个生活化比喻：
+>
+> * **高内聚** (推荐)：你有一个抽屉，里面只放刀、叉、筷子这些餐具。这个抽屉的“职责”非常明确单一：**存放餐具**。你需要餐具时，目标明确，直接打开这个抽屉就行。
+> * **低内聚** (不推荐)：你有一个“**万能抽屉**“，里面有筷子、螺丝刀、旧电池、过期的优惠卷和一只袜子。这个抽屉里的东西互相之间没什么联系，职责混乱。当你想找东西时，就像大海捞针。
+>
+> 在程序之中：
+>
+> * **高内聚的类**：例如一个 `UserService` 类，里面所有的方法都应该是和这个”用户“核心概念相关的，比如 `registerUser()`, `login()`, `getUserProfile()`, `updatePassword()`。这个类的目标很专一，就是**管理用户**。
+> * **低内聚的类（被称为”上帝类 God Class"）**：一个 `SuperManager` 类，它里面既有处理用户登录的方法，又有查询商品库存的方法，还能发送邮件，顺便再计算一下订单价格。这种类什么都干，职责不单一，非常难以维护。
+>
+> 
+>
+> **低耦合** 可以用一句话抽象的理解 “**君子之交淡如水**”。
+>
+> 它的核心思想是：模块与模块之间，应该尽量减少依赖和关联。一个模块的改动，不应该影响到其他模块。简单来说，就是**让模块之间保持独立，互相不要“管得太宽”**。
+>
+> * **低耦合的代码** (推荐)：你应该调用的是一个抽象的接口，而不是一个具体的类。这样，当功能需要改变时，我们不需要动整体的部分。例如上述的例子，我们使用了 `List<String> listA` 去声明这个变量，而不是使用具体的 `ArrayList<String>` 去声明变量。
+> * **高耦合的代码** (不推荐)：调用了具体的类。例如上述例子我们使用 `ArrayList<String>` 去声明变量，那么当我需要将这个变量改成 `LinkedList<String>` 的时候，我们就需要更改许多代码。
+
+
+
 
 
 #### 2.8 Java 内部类 (Inner Class)
@@ -3104,7 +3423,174 @@ public class ThreadExample {
 
 
 
-##### 2.9 Java 中的异常捕获与处理
+**2.8.4.1 函数式接口与** `@FunctionalInterface`
+
+在 Java 8 以后，提供了一个新的注解 `@FunctionalInterface`。他是用来**告诉编译器或者其他程序员的**，并不是必须写的。声明这个是一个**函数式接口**。
+
+简单来说，一个接口如果 **有且仅有一个抽象方法**，那它就是一个“函数式接口”。
+
+- **“有且仅有”**：不能多，也不能少，必须是 **正好一个**。
+- **“抽象方法”**：就是接口里那种没有方法体、需要实现类去具体实现的方法。
+
+```java
+// 这是一个“吃饭”的专一任务清单
+interface Eatable {
+    void eat(); // 只有一个抽象方法
+}
+
+// 这是一个“说话”的专一任务清单
+interface Speakable {
+    String speak(String content); // 只有一个抽象方法
+}
+
+// 这就不是函数式接口了，因为它有两个任务
+interface MultiTask {
+    void doThis();
+    void doThat();
+}
+```
+
+注解**正确的用法**：
+
+```java
+@FunctionalInterface // 告诉编译器，请检查我！
+interface Calculator {
+    int calculate(int a, int b); // OK，只有一个抽象方法
+}
+```
+
+**错误的用法**：
+
+```java
+@FunctionalInterface // 编译器开始检查...
+interface BadCalculator {
+    int add(int a, int b);
+    int subtract(int a, int b); // 噢！第二个抽象方法！报错！
+}
+// 编译错误信息：Multiple non-overriding abstract methods found in interface BadCalculator
+```
+
+**特别注意：接口里的“例外”方法**
+
+函数式接口的规则是“有且仅有一个抽象方法”，但有两个例外情况，它们不算在“抽象方法”的数量里：
+
+1. **`default` 方法和 `static` 方法**
+   - Java 8 允许在接口中定义 `default` 方法（默认方法）和 `static` 方法（静态方法）。因为它们都有自己的方法体，不是抽象的，所以**一个函数式接口里可以有任意多个 `default` 方法和 `static` 方法**。
+2. **继承自 `java.lang.Object` 的 `public` 方法**
+   - 如果一个接口声明了一个和 `Object` 类的 `public` 方法签名相同的方法（比如 `toString()`, `equals()`, `hashCode()`），这个方法**也不会计入抽象方法的总数**。因为任何类都隐式地继承了 `Object`，所以这个方法最终总是会有实现的。
+
+```java
+@FunctionalInterface
+interface SmartCalculator {
+
+    // 1. 这是那个唯一的抽象方法
+    int calculate(int a, int b);
+
+    // 2. 可以有 default 方法
+    default void sayHello() {
+        System.out.println("我是一个智能计算器！");
+    }
+
+    // 3. 可以有 static 方法
+    static void showInfo() {
+        System.out.println("这是一个函数式接口。");
+    }
+
+    // 4. 可以声明 Object 的方法，这不算数
+    @Override
+    String toString();
+}
+```
+
+
+
+说了这么多，函数式接口到底有什么用呢？它最大的意义就是**作为 Lambda 表达式的目标类型**。
+
+Lambda 表达式是 Java 8 的核心特性之一，它允许我们用一种非常简洁的方式来传递代码块。而函数式接口，正好可以“接住”这个 Lambda 表达式。
+
+```java
+public class Main {
+    public static void main(String[] args) {
+        // 使用我们之前定义的 Calculator 接口
+        // 不用再写 new Calculator() { ... } 这样的匿名内部类了
+        // 直接用 Lambda 表达式为那个唯一的抽象方法 calculate 提供实现
+        Calculator adder = (x, y) -> x + y;
+        Calculator multiplier = (a, b) -> a * b;
+
+        int sum = adder.calculate(10, 20);
+        int product = multiplier.calculate(10, 20);
+
+        System.out.println("和是：" + sum);       // 输出: 和是：30
+        System.out.println("积是：" + product); // 输出: 积是：200
+    }
+}
+```
+
+`(x, y) -> x + y` 这段代码就是 Lambda 表达式，它简洁地实现了 `calculate(int a, int b)` 这个抽象方法。Java 编译器看到这个 Lambda 表达式，就知道它是为 `Calculator` 接口服务的。
+
+
+
+**2.8.4.2 方法引用**
+
+**方法引用是 Lambda 表达式的"语法糖"**，能够让代码更简洁。用来专门替代那些“只用了一个静态方法”的 Lambda 表达式。
+
+**如果某个 Lambda 表达式里面只是调用了一个静态方法，并且 `->` 前后参数的形式一致，就可以使用静态方法引用。**
+
+**静态方法引用**的语法非常简单：
+
+`ClassName::staticMethodName`
+
+例如我们想写 `(o1, o2) -> o1.getAge() - o2.getAge()`，我们可以将其等价于下面代码：
+
+```java
+import ...
+    
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class Student {
+    private int age;
+    public static int compareByAge(Student o1, Student o2) {
+        return o1.getAge() - o2.getAge();
+    }
+}
+```
+
+当使用时，直接使用 `Student::compareByAge` 即可。
+
+
+
+**如果某个 Lambda 表达式里面只是调用了一个实例方法，并且 `->` 前后参数的形式一致，就可以使用实例方法引用。**
+
+**实例方法引用**的语法非常简单：
+
+`ClassName::instanceMethodName`
+
+例如我们想写 `(o1, o2) -> t.compareByHeight(o1, o2)`，我们可以将其等价于下面代码：
+
+```java
+import ...
+    
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class Student {
+    private int age;
+    private double height;
+    public static int compareByAge(Student o1, Student o2) {
+        return o1.getAge() - o2.getAge();
+    }
+    public int compareByHeight(Student o1, Student o2) {
+        return Double.compare(o1.getHeight(), o2.getHeight());
+    }
+}
+```
+
+我们就可以使用 `t::compareByHeight`。
+
+
+
+#### 2.9 Java 中的异常捕获与处理
 
 Java 中一共有三种错误，分别是：
 
@@ -3119,6 +3605,8 @@ Java 中一共有三种错误，分别是：
 正常情况下，当异常出现时，程序会被强行终止。但是在我们平时运行的过程中，我们并不想让程序直接终止，而是处理这个异常之后继续运行这个程序，这时候就是**异常处理**发挥作用的时候。
 
 
+
+##### 2.9.1 try-catch-finally 代码块
 
 异常处理的核心就是 `try-catch-finally` 代码块。它的用法是：
 
@@ -3300,3 +3788,1317 @@ java.lang.ArrayIndexOutOfBoundsException: Index 5 out of bounds for length 5
 ```
 
 我们会发现少了许多详细信息，那些详细信息叫做**堆栈追踪 (Stack Trace)**，能够帮助我们找到**错误发生的正确位置（文件名+行号）**，并且展示了**方法调用的完整链条**。
+
+如果想要让 try-catch 块也带上堆栈追踪，那就要用到 StackTraceElement[] 来存储，并且使用 `getStackTrace()` 函数获取，例如：
+
+```java
+public class Test {
+    public static void level1() {
+        level2();
+    }
+    
+    public static void level2() {
+        level3();
+    }
+    
+    public static void level3() {
+        int[] arr = new int[5];
+        arr[5] = 10; // 这一步是有问题的，数组越界了
+    }
+    
+    public static void main(String[] args) {
+        try {
+            level1();
+        } catch (Exception e) {
+            StackTraceElement[] stackTrace = e.getStackTrace();
+            for (int i = 0; i < stackTrace.length; i++) {
+                System.out.println(stackTrace[i]);
+            }
+        }
+    }
+}
+```
+
+或者使用 `e.printStackTrace()` 来输出对战追踪：
+
+```java
+public class Test {
+    public static void level1() {
+        level2();
+    }
+    
+    public static void level2() {
+        level3();
+    }
+    
+    public static void level3() {
+        int[] arr = new int[5];
+        arr[5] = 10; // 这一步是有问题的，数组越界了
+    }
+    
+    public static void main(String[] args) {
+        try {
+            level1();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+```
+
+
+
+##### 2.9.2 受检检查与不受检检查
+
+**受检异常 (Checked Exception)** 是指 Java 编译器在编译代码的时候就检查你是否对一些特定的异常做了处理。例如我们还没学的 `FileNotFoundException`，是文件不存在的一个异常。当编译器发现需要读取的文件不存在时，就会要求我们进行处理。例如：
+
+```java
+public class Test {
+    public static void main(String[] args) {
+        FileReader fileReader = new FileReader("a.txt");
+    }
+}
+```
+
+编译器会报错 `Unhandled exception: java.io.FileNotFoundException`，因为有的时候 a.txt 可能不存在，所以有可能会让程序退出。所以编译器会要求我们一定要用 `try catch` 来捕获以及处理异常。
+
+正确做法是：
+
+```java
+public class Test {
+    public static void main(String[] args) {
+        try {
+            FileReader fileReader = new FileReader("a.txt");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }        
+    }
+}
+```
+
+实际上，所有继承自 `Exception` 类，但**不**继承自 `RuntimeException` 的异常，都是 Checked Exception。
+
+
+
+**非受检异常 (Unchecked Exception)** 是一种类似“意料之外的内部错误”，编译器不会强制你去处理他们。一般是程序的**逻辑错误**或者**运行时错误**，例如我们前面提到的 `x / 0`，以及空指针等问题。编译器不会在编译器检查你是否处理了这类异常，但如果你不处理，异常会一直向上抛出，知道被 try-catch 块捕获，或者到达 JVM 导致程序中断，例如：
+
+```java
+public class Test {
+    public static void main(String[] args) {
+        Studeng a = null;
+        a.setId(123);
+    }
+}
+```
+
+这段会导致 `NullPointerException`，即空指针异常。如果你不进行处理，则会导致程序崩溃。
+
+正确做法是：
+
+```java
+public class Test {
+    public static void main(String[] args) {
+        try {
+            Studeng a = null;
+        	a.setId(123);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+```
+
+实际上，所有继承自 `RuntimeException` 的异常，都是 Unchecked Exception。
+
+
+
+##### 2.9.3 throw，throws 关键词
+
+对于所有**受检异常**，我们上面提到过，如果不进行处理，编译器会在编译时期进行报错。对于所有的错误来说，如果我们不想在方法本身进行处理，而是交给其调用者进行处理，我们就可以使用 `throws` 以及 `throw` 关键字。
+
+`throws` 关键字的作用是：声明此方法**可能**会抛出的**异常类型**。它自己不处理异常，而是把处理异常的责任**向上抛给调用者**。当我们要使用时，将其放在 `)` 和 `{` 之间。例如：
+
+```java
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+
+public class Test {
+    public static void method(String filepath) throws FileNotFoundException {
+        FileReader fileReader = new FileReader(filepath); // 这一行代码是有可能出错的
+    }
+    
+    public static void main(String[] args) {
+        try {
+            method("a.txt"); // 因为我们调用了这一个函数，所以调用者 (main) 需要处理这个异常
+        } catch (FileNotFoundException e) {
+            System.out.println(e);
+            e.printStackTrace();
+        }
+    }
+}
+```
+
+当然我们也可以多次向上抛，例如：
+
+```java
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+
+public class Test {
+    public static void method1(String filepath) throws FileNotFoundException {
+        FileReader fileReader = new FileReader(filepath); // 这一行代码是有可能出错的
+    }
+    
+    public static void method2(String filepath) {
+        try {
+            method1(filepath); // 因为我们调用了这一个函数，所以调用者 (method1) 需要处理这个异常
+        } catch (FileNotFoundException e) {
+            System.out.println(e);
+            e.printStackTrace();
+        }
+    }
+    
+    public static void main(String[] args) {
+       method2("a.txt"); // 因为 method2 已经处理了 method1 的异常，所以这里不用处理
+    }
+}
+```
+
+当然，main 函数也可以抛出异常，但抛出之后，就是 JVM 直接处理，会导致程序崩溃。例如：
+
+```java
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+
+public class Test {
+    public static void method(String filepath) throws FileNotFoundException {
+        FileReader fileReader = new FileReader(filepath); // 这一行代码是有可能出错的
+    }
+    
+    public static void main(String[] args) throws FileNotFoundException {
+        method("a.txt"); // 这一行代码可能出错，但我们向上抛了，那么 main 方法的调用者 (JVM) 就要接收这个异常，然后程序崩溃并中断
+    }
+}
+```
+
+
+
+`throw` 关键词用于**主动、立刻抛出一个异常对象**。一旦执行到 `throw` 语句，方法会立刻停止执行，并把这个异常抛出去。
+
+`throw` 通常用于我们自己程序的逻辑判断中。例如，Java 本身并不知道“年龄不能是负数”这个规则，但我们程序需要这个规则，当我们发现不符合规则的数据时就可以抛出一个异常来报告错误。例如：
+
+```java
+public class Test {
+    public static void check(int age) {
+        if(age < 0) {
+            // IllegalArgumentException 是一个很常用的异常，表示“不合法的参数”
+            throw new IllegalArgumentException("年龄不能为负数");
+        }
+        System.out.println("检查成功");
+    }
+    public static void main(String[] args) {
+        try {
+            check(-10);
+        } catch (IllegalArgumentException e) {
+            System.err.println("数据错误，原因：" + e.getMessage());
+        }
+    }
+}
+```
+
+但是请注意，`throw` 一个**非受检异常**像是随手扔一个垃圾，Java 的编译器不会报错。哪怕是上述代码删除了 try-catch 块，在编译时也是能通过的。
+
+但是当 `throw` 抛出一个**受检异常**是，你就需要用以下两种中任意一种方式进行处理：
+
+1. 在当前方法中加入 `throws` 声明。例如：
+   ```java
+   public void doSomethingDangerous() throws IOException {
+       throw new IOException("一个危险的操作失败了！");
+   }
+   ```
+
+2. 用 `try-catch` 把 `throw` 语句包起来。例如：
+   ```java
+   public void doSomethingDangerous() {
+       try {
+           // 我自己抛出，又自己捕捉，当场解决
+           throw new IOException("一个危险的操作失败了！");
+       } catch (IOException e) {
+           System.err.println("危险操作已处理：" + e.getMessage());
+       }
+   }
+   ```
+
+
+
+##### 2.9.4 try-with-resources
+
+在 java 中，类似于文件、网络连接、数据库连接等这类资源，在**用完之后必须手动关闭**，否则就会一直占用系统资源，造成**资源泄露**。
+
+在 Java 7 之前，我们必须使用 `try-catch-finally` 结构，以保证资源在用完之后被手动关闭。（这里的 BufferedReader 就是其中的一个资源，你不需要知道具体是干什么的，这里你只需要知道我们需要关闭它）
+
+```java
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+
+public class OldWay {
+    public static void main(String[] args) {
+        BufferedReader br = null; // 1. 必须在 try 块外部声明，否则 finally 访问不到
+        try {
+            br = new BufferedReader(new FileReader("myFile.txt"));
+            String line;
+            while ((line = br.readLine()) != null) {
+                System.out.println(line);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally { // 2. 使用 finally 块来确保关闭
+            try {
+                if (br != null) { // 3. 必须检查 br 是否为 null
+                    br.close(); // 4. close() 本身也可能抛出 IOException，所以内部还需要一个 try-catch
+                }
+            } catch (IOException ex) {
+                ex.printStackTrace();
+            }
+        }
+    }
+}
+```
+
+这样写的代码缺点是：太冗长了，写了嵌套的 `try-catch` 还有 `finally`，并且如果你忘记书写 `finally` 或者在 `finally` 中忘记做 `null` 检查，都可能导致资源泄露或者空指针异常。
+
+
+
+但是在 Java 7 之后，我们可以用一种更简洁的方式来书写。对于那些实现了 `java.lang.AutoCloseable` 接口的资源（所有的文件、网络、数据库相关的资源类都是先了这个接口），只要你把它们的初始化放进 `try` 后面的括号里，Java 就会**自动**帮你关闭它们。对于上述例子，我们可以这样重写：
+
+```java
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+
+public class NewWay {
+    public static void main(String[] args) {
+        // 1. 把需要自动关闭的资源，定义在 try 后面的括号里
+        try (BufferedReader br = new BufferedReader(new FileReader("myFile.txt"))) {
+            // 2. 在这里只管使用资源，完全不用考虑关闭的事情！
+            String line;
+            while ((line = br.readLine()) != null) {
+                System.out.println(line);
+            }
+        } catch (IOException e) {
+            // 3. 如果创建资源或读取文件时发生错误，就会在这里捕获
+            e.printStackTrace();
+        }
+        // 4. 当程序执行到这里时，无论try块是正常结束还是异常退出，br 都已经被自动关闭了！
+    }
+}
+```
+
+
+
+##### 2.9.5 自定义异常
+
+有的时候我们需要自定义一些自己的异常，我们该怎么做呢？可以跟着下面的小例子来学习以及理解：
+
+首先我们创建一个银行账户类：
+
+```java
+// BankAccount.java
+public class BankAccount {
+    private int balance;
+    public BankAccount(int amount) {
+        this.balance = amount;
+    }
+    public void withdraw(int amount) throws Exception {
+        if(amount > balance) {
+            // 我们之前是直接打印错误。但是当我们学了异常之后，我们就知道可以抛出一个异常
+            throw new Exception("No enough money");
+        }
+        balance -= amount;
+    }
+}
+```
+
+那么我们在主程序类调用的时候：
+
+```java
+// Test.java
+public class Test {
+    public static void main(String[] args) {
+        BankAccount bankAccount = new BankAccount(10);
+        try {
+            backAccount.withdraw(11);
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+        }
+    }
+}
+```
+
+
+
+但我们想要自定义异常，该怎么做呢？我们可以创建一个继承于 `Exception` 类的类，例如：
+
+```java
+// InsufficientFundsException.java
+public class InsufficientFundsException extends Exception {
+    public InsufficientFundsException() {
+        super("No enough money");
+    }
+}
+```
+
+然后修改一下银行账户类抛出的异常
+
+```java
+// BankAccount.java
+public class BankAccount {
+    private int balance;
+    public BankAccount(int amount) {
+        this.balance = amount;
+    }
+    // 因为父类 Exception 是一个受检异常，所以我们也要用 throws 代码块
+    public void withdraw(int amount) throws InsufficientFundsException {
+        if(amount > balance) {
+            // 抛出我们自己定义的异常
+            throw new InsufficientFundsException();
+        }
+        balance -= amount;
+    }
+}
+```
+
+最后在调用者这里修改一下捕捉的异常类型（当然也可以不修改，因为可以向上转型，但是为了代码的可读性我们还是要修改）：
+
+```java
+// Test.java
+public class Test {
+    public static void main(String[] args) {
+        BankAccount bankAccount = new BankAccount(10);
+        try {
+            backAccount.withdraw(11);
+        } catch (InsufficientFundsException e) {
+            System.out.println(e.getMessage());
+        }
+    }
+}
+```
+
+这样就完成了我们的自定义异常。
+
+
+
+#### 2.10 Java 中的包装类 （自动装箱，自动拆箱）
+
+在 Java 中，数据类型被分为**基本数据类型**和**对象类型**两大类。但是 Java 中有很多地方**只接受对象类型**，例如**集合类 (Java Collections)**，比较典型的就是 `ArrayList` 和 `HashMap`。你不能创建一个 `ArrayList<int>`，因为它规定了 `<>` 里面必须是对象类型。
+
+那怎么办呢？我想要将 `int` 放进一个列表里喵。
+
+这时候，**包装类**就产生了。它的作用是将基本数据类型放进一个专门为它定制的对象里，让它获得对象的身份。
+
+| 基本数据类型 |  包装类   |
+| :----------: | :-------: |
+|     byte     |   Byte    |
+|    short     |   Short   |
+|     int      |  Integer  |
+|     long     |   Long    |
+|    float     |   Float   |
+|    double    |  Double   |
+|     char     | Character |
+|   boolean    |  Boolean  |
+
+
+
+在 Java 5 以前，基本数据类型与包装类的转换过程需要我们手动来做：
+
+```java
+// 手动装箱 (Boxing)
+int x = 10;
+Integer wrapperX = Integer.valueOf(x);
+
+// 手动拆箱 (Unboxing)
+int y = wrapperX.intValue();
+```
+
+
+
+在 Java 5 以后，JVM 变得更聪明了，它会帮我们自动完成这个过程，即**自动装箱与自动拆箱 (Autoboxing & Autounboxing)**。
+
+对于以下操作，它们都是合法的：
+
+**自动装箱 (Autoboxing)**：
+
+```java
+// 编译器会自动将 100 包装成一个 Integer 对象
+Integer x = 100;
+
+ArrayList<Integer> arr = new ArrayList<>();
+arr.add(95); // 编译器会自动将 95 这个 int 值包装成 Integer 对象再放入列表里
+
+int y = 90;
+arr.add(y); // 编译器会自动将 y 包装成一个 Integer 对象再放入列表里
+```
+
+**自动拆箱 (Autounboxing)**：
+
+```java
+Integer x = 95;
+int y = x + 5; // 编译器会将 x 对象拆成 int 类型的 95，然后再加 5.
+```
+
+
+
+但自动装箱和拆箱也会有一些”小陷阱“：
+
+**陷阱一：**`NullPointerException`
+
+包装类是一个对象，所以它可以是 `null`。如果 `null` 的包装类对象被自动拆箱，就会抛出 `NullPointerException`：
+
+```java
+Integer x = null;
+int y = x; // 这里会抛出 NullPointerException 异常，因为试图对 null 进行拆箱
+```
+
+**陷阱二：**`==` **和** `.equals()` 的区别
+
+与之前我们提到的 String 类的比较类似，对于包装类这种对象，`==` 比较的是**内存地址**，而 `.equals()` 比较的是它们内部的**值**。
+
+```java
+Integer a = 100;
+Integer b = 100;
+Integer c = 200;
+Integer d = 200;
+
+System.out.println(a == b); // true
+System.out.println(c == d); // false
+System.out.println(c.equals(d)); // true
+```
+
+为什么这里 `a == b` 是 true，而 `c == d` 是 false 呢？因为 Java 为了性能，缓存了 `-128` 到 `127` 之间的 `Integer` 对象。所以 `a` 和 `b` 指向的是同一个缓存中的对象。而 `200` 超出了这个范围，所以 `c` 和 `d` 是两个独立 new 出来的不同对象，地址不同。
+
+> 为什么只缓存 `-128` 到 `127` 之间的 `Integer` 对象呢？这是因为，这一段之间的数据是使用**最频繁的数字**（循环计数器，数组索引，小的状态码等）。我们将其提前缓存下来，就能够大大减少创建对象的开销，降低了垃圾回收（GC）的压力，提升了性能。
+>
+> 为什么范围不能太小：很多常见的循环就享受不到优化的好处了。例如 `for(int i = 1; i <= 100; i++)`。
+>
+> 为什么范围不能太大：缓存是占用**永久内存**的。如果创建过多的对象，但大数字的使用频率远低于小数字，为了那些使用频率较小的东西而永久占用内存，有点得不偿失了。
+>
+> 这个范围刚好与 `byte` 类型所表示的完整范围巧合。设计者们认为，这个范围不大不小，而且正好覆盖了绝大多数高频使用的正数，是一个性价比非常高的选择。所以最后决定缓存 `-128` 到 `127` 之间的 `Integer` 对象，并将它们放入 `IntegerCache` 缓存区中。
+
+所以，**比较包装类对象的值时，永远要使用** `.equals()` **方法而不是** `==` **！**
+
+
+
+#### 2.11 Java 中的枚举 (Enum)
+
+`enum` 就是**用来定义一组固定的常量集合的**。比如：一周有七天、一年有四季、红绿灯有三种颜色等等。
+
+`enum` 能够提供**类型安全**，例如下述例子:
+
+```java
+// Day.java
+public enum Day {
+    MONDAY,
+    TUESDAY,
+    WEDNESDAY,
+    THURSDAY,
+    FRIDAY,
+    SATURDAY,
+    SUNDAY
+}
+```
+
+```java
+// Test.java
+public class Test {
+    public static void main(String[] args) {
+        Day today = Day.FRIDAY; // 声明一个 Day 类型的变量，它的值只能是 Day 中定义的七个之一
+        // 编译器会检查，你不能给它赋其他值，例如 Day today = 1;
+        switch(today) {
+            case MONDAY:{
+                System.out.println("周一，元气满满！");
+                break;
+            }
+            case FRIDAY:{
+                System.out.println("周五啦，马上可以休息了！");
+                break;
+            }
+            default:{
+                System.out.println("是其他日子。");
+                break;
+            }
+        }
+    }
+}
+```
+
+这样，所有 enum 类型的变量，都只能赋值里面枚举的值，他不能赋其他值，所以满足了**类型安全**。
+
+
+
+`enum` 本质上是一个**特殊的类**。这意味着它可以拥有**成员变量**，**构造方法**，以及**成员方法**。
+
+```java
+// Season.java
+public enum Season {
+    // 定义四个枚举实例，并在括号里传入构造方法需要的参数
+    SPRING("春天");
+    SUMMER("夏天");
+    AUTUMN("秋天");
+    WINTER("冬天");
+    // 枚举能够拥有它自己的成员变量
+    private final String chineseName;
+    // 枚举能够拥有它自己的构造方法，但是它一定要是 private，由编译器自动调用
+    private Season(String chineseName) {
+        this.chineseName = chineseName;
+    }
+    // 枚举能够拥有它自己的成员方法
+    public String getChineseName() {
+        return this.chineseName;
+    }
+}
+```
+
+```java
+// Test.java
+public class Test {
+    public static void main(String[] args) {
+        Season currentSeason = Season.AUTUMN;
+        // 我们可以直接调用枚举实例的方法
+        System.out.println(currentSeason.getChineseName());
+        System.out.println(currentSeason.name());
+    }
+}
+```
+
+
+
+`enum` 会自动继承一些方法：
+
+* `values()` 返回一个包含所有枚举常量的数组
+
+  ```java
+  for (Day day : Day.values()) {
+      System.out.println(day);
+  }
+  ```
+
+* `valueOf(String name)` 根据字符串名字，返回对应的枚举常量
+
+  ```java
+  Day day = Day.valueOf("MONDAY"); // day 的值是 Day.MONDAY
+  ```
+
+* `name()` 返回枚举常量自身的名称（字符串形式）
+
+  ```java
+  String name = Day.MONDAY.name(); // name 的值是 "MONDAY"
+  ```
+
+* `ordinal()` 返回枚举常量的序数 （从 0 开始）
+
+  ```java
+  int mondayIndex = Day.MONDAY.ordinal(); // 值为 0
+  int sundayIndex = Day.SUNDAY.ordinal(); // 值为 6
+  ```
+
+
+
+对于 enum 来说，它的 `toString()` 方法返回的也是 name，也就是跟 `.name()` 方法同效果。
+
+
+
+实际上，对于以下的代码：
+
+```java
+public enum Day {
+    SUNDAY, MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY
+}
+```
+
+它编译后是以下的代码：
+
+```java
+public final class Day extends java.lang.Enum<Day> {
+    public static final Day SUNDAY = new Day("SUNDAY", 0);
+    public static final Day MONDAY = new Day("MONDAY", 1);
+    public static final Day TUESDAY = new Day("TUESDAY", 2);
+    public static final Day WEDNESDAY = new Day("WEDNESDAY", 3);
+    public static final Day THURSDAY = new Day("THURSDAY", 4);
+    public static final Day FRIDAY = new Day("FRIDAY", 5);
+    public static final Day SATURDAY = new Day("SATURDAY", 6);
+    
+    private static final Day[] VALUES = { SUNDAY, MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY };
+    
+    private Day(String name, int ordinal) {
+        super(name, ordinal);
+    }
+    
+    public static Day[] values() {
+		return VALUES.clone();
+    }
+    
+    public static Day valueOf(String name) {
+        for (Day day : VALUES) {
+            if(day.name().equals(name)) {
+                return day;
+            }
+        }
+        throw new IllegalArgumentException("No enum constant " + name);
+    }
+}
+```
+
+
+
+请记住，`enum` 前面的部分**一定要是枚举常量**，即它的成员变量，成员方法以及构造函数需要放在**所有枚举常量后面**。例如这样是正确的:
+
+```java
+public enum Day {
+    SUNDAY, MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY;
+    private int days;
+}
+```
+
+而这样是错误的：
+
+```java
+public enum Day {
+    private int days;
+    SUNDAY, MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY;
+}
+```
+
+
+
+对于所有的 `enum`，我们不需要加上 `static` 修饰，它默认是被 `static` 修饰的。意味着所有的 `enum` 都是静态的，都是属于类本身的。
+
+
+
+### 3. Java 多线程
+
+
+
+#### 3.0 一些基础知识
+
+> 以下内容很抽象并且排版不是很好喵 () 如果有看不懂的建议结合 ai 来学习喵
+
+一个 CPU 里面有多个核，**一个核**就是**一个独立处理单元**。这样的结构允许 CPU 能够同时执行多个任务。例如一个四核 CPU，就允许 CPU 同时执行四个任务。
+
+**一个程序**就是一个**静态的**，**存放在硬盘里的一个文件**，**包含了一系列指令和数据**。像是 Word，他能允许我们创建并且编辑 word 文档。
+
+**一个进程**就是一个**正在运行的程序实例**，当进程启动时，操作系统会将这个程序加载到内存里，并开始执行它的指令。
+
+**一个线程**是**进程内部最小的执行单元**。**一个进程可以拥有多个线程，它们共享着相同的资源，但是可以独立运行。**
+
+
+
+**多任务处理 (Multitasking) 允许一个操作系统同时运行多个进程**。在单核 CPU 上，这是通过**分时 (time-sharing) 技术实现的，即在任务之间快速切换**。在多核 CPU 上，则会发生**真正的并行执行，任务会被分配到不同的核心上。** **操作系统调度器 (OS scheduler) 负责平衡负载，以确保系统性能的高效和灵敏响应。**
+
+> **并发** 指的是在一段时间内，宏观上看起来像多个任务在同时执行，但微观上，处理器在同一时刻只处理一个任务，只是在它们之间快速切换。一般是单核 CPU 之中发生的。
+>
+> **并行** 指的是多个任务在同一时刻，在不同的处理器核心上同时执行。这是物理层面的“同时”。一般是在多核 CPU 之中发生的。
+>
+> **操作系统调度器** 用于平衡负载，确保整个系统高效，并且能灵敏相应。能够动态调整任务，让忙的核心任务轻松一些，让闲的核心任务重一些，或者是核之间切换等。
+
+
+
+**多线程**是指在**单个进程内部**，**并发执行多个线程的能力**。多线程通过**将单个任务（进程）分解成更小的子任务（线程）**，从而增强了多任务处理的效率。**这些线程可以被（并发或者并行）的同时处理，进而更好的利用 CPU 的处理能力。**例如一个网页浏览器就是一个**进程**，但是它里面会有多个**线程**，例如界面线程，负责鼠标点击，滚动页面等；网络线程，负责下载东西等；渲染线程，将下载的内容计算并且绘制到屏幕上。
+
+正式因为有了**多线程**，你才可以在一个大图片还没有加载完成时，依然能够顺畅的滚动页面（网络线程在被占用，但是界面线程在响应你）。如果浏览器是单线程的，那么在下载图片时，整个程序就会卡住，你什么也做不了，直到图片下载完成为止。所以多线程极大的提升了单个应用程序的**响应能力**和**效率**。
+
+
+
+**上下文切换 (Context Switching)** 是指**保存**当前运行中进程或者线程的状态（上下文），并**加载**下一个待执行进程或线程的状态的过程。当一个进程或者线程的**时间片 (time slice)** 用尽时，操作系统调度器会执行一次上下文切换，将 CPU 的控制权转移给另一个进程或线程。这使得多个进程和线程能够共享 CPU，进而在单核 CPU 上营造出**并发执行的假象**，或在多核 CPU 上提升**并行性能**。
+
+但是，**上下文切换**是有**性能开销**的，因此，操作系统需要找到一个合适的切换频率。
+
+
+
+**粒度 (Granularity)** 指的是看待问题的“粗细程度”或者“缩放级别”。
+
+多任务处理可以通过多线程来解决，其做法是将每个任务分解成可以被并发管理的多个线程。虽然多任务通常指的是运行多个应用程序，但多线程的**粒度**更细，它处理的是同一个应用程序（或进程）内部的多个线程。
+
+**多任务**着眼于**进程之间**，是宏观的、粗粒度的。
+
+**多线程**着眼于**进程之内**，是围观的、细粒度的。
+
+
+
+**多任务 (Multitasking) 涉及管理完全独立的程序**之间的资源，这些程序各自拥有**独立的内存空间和系统资源**。
+
+* **优点：安全、隔离**。因为每个程序都有其独立的内存空间和系统资源。
+* **缺点：通信成本高**。进程间通信比较的**繁琐以及耗时**。
+
+**多线程 (Multithreading) 涉及管理单个程序内部**的资源，在这种模式下，所有线程**共享相同的内存和资源**。
+
+* **优点：通信效率极高**。因为资源是共享的，所以线程间通信效率很高。
+* **缺点：容易相互干扰**。因为资源是共享的，有可能产生冲突（**资源竞争**）。为了避免这种混乱，我们需要**线程同步，例如使用锁 (Lock)**。
+
+
+
+**多任务 (Multitasking) 允许我们同时运行多个应用程序，从而提高生产率和资源利用率。**
+
+**多线程 (Multithreading) 允许单个应用程序同时执行多项任务，从而提升应用程序的性能和响应能力**。 
+
+
+
+在 Java 中，**多线程是指并发执行两个或多个线程，以最大限度地使用 CPU。**Java 为多线程提供了强大的支持，允许开发者创建能够同时执行多项任务的应用程序，从而提升性能和响应能力。**Java 的多线程是** `java.lang` **包的一部分**，这使得**实现并发执行变的很容易**。
+
+线程是一个轻量级的进程，是**最小的处理单元**。Java **通过** `java.lang.Thread` **类和** `java.lang.Runnable` **接口来支持多线程。**
+
+在**单核环境**中，Java 的多线程由 JVM 和操作系统管理，它们通过在线程间进行切换来造出**并发的假象**。这些线程共享一个核心，并使用**时间分片 (time-slicing)** 技术来管理线程的执行。
+
+在**多核环境**中，Java 的多线程可以充分利用所有可用的核心。JVM 会将线程分配到多个核心上，从而实现线程的**真正并行执行**。
+
+当 Java 程序启动时，有一个线程会立即开始运行，它被称为**主线程 (main thread)**，该线程负责执行程序的 `main` 方法。
+
+
+
+要想实现 Java 中的多线程，即在 Java 中创建一个新线程，你可以继承 Thread 类，也可以实现 Runnable 接口。
+
+
+
+#### 3.1 创建多线程
+
+Java 中有两种方法创建多线程：继承 `Thread` 类或者实现 `Runnable` 接口。
+
+以下的例子，我们在主线程中写一个死循环，输出 "Hello"，而新线程写一个死循环，输出 "World"，来模拟线程被占用的情况。
+
+先考虑一个问题，如果我们这样写，”Hello" 和 “World” 都会输出出来吗？
+
+```java
+public class Hello {
+    public static void main(String[] args) {
+        for(;;) { // 这样写相当于死循环
+            System.out.println("Hello");
+        }
+        for(;;) {
+            System.out.println("World");
+        }
+    }
+}
+```
+
+这样子，实际上代码会一直在 `System.out.println("Hello");` 中循环，即一直输出 "Hello"。因为这个循环没有结束，所以它不会进入到下一个语句中，我们就可以以此来模拟线程被占用的情况。
+
+* 继承 `Thread` 类的方法：
+
+```java
+// World.java
+public class World extends Thread {
+    // 重写 run() 方法，这里是新线程要执行的核心代码
+    @Override
+    public void run() {
+        for(;;) {
+			System.out.println("World");
+        }
+    }
+}
+```
+
+```java
+// Hello.java
+public class Hello {
+    public static void main(String[] args) {
+        World world = new World();
+        // 当我们调用 start() 方法时，就是启动了一个新线程
+        world.start();
+        for(;;) {
+            System.out.println("Hello");
+        }
+    }
+}
+```
+
+我们在控制台中，就能看到有时候输出 Hello，有时候输出 World，代表我们成功开启了一个新线程（因为两个任务同时执行了）
+
+如果我们想给线程特殊的名字，对于继承 `Thread` 类的做法，我们可以通过重载构造方法实现：
+
+```java
+public class World extends Thread {
+    // 我们可以通过给构造函数加上一个 name 参数来实现
+    public World(String name) {
+    	super(name);
+	}
+    @Override
+    public void run() {
+        for(;;) {
+			System.out.println("World");
+        }
+    }
+}
+```
+
+```java
+// Hello.java
+public class Hello {
+    public static void main(String[] args) {
+        World world = new World("ice");
+        // 这样，当我们执行 Thread.currentThread().getName() 时，显示的线程名字就是 "ice"
+        world.start();
+        for(;;) {
+            System.out.println("Hello");
+        }
+    }
+}
+```
+
+* 实现 `Runnable` 接口的方法：
+
+```java
+// World.java
+public class World implements Runnable {
+    // 重写 run() 方法，这里是新线程要执行的核心代码
+    @Override
+    public void run() {
+        for(;;) {
+			System.out.println("World");
+        }
+    }
+}
+```
+
+```java
+// Hello.java
+public class Hello {
+    public static void main(String[] args) {
+        World world = new World();
+        // 我们需要先创建一个 Thread 对象
+        Thread world1 = new Thread(world);
+        // 然后再让线程开始
+        world1.start();
+        for(;;) {
+            System.out.println("Hello");
+        }
+    }
+}
+```
+
+当然，有时候我们需要给线程赋予名字，我们也可以这样做：
+
+```java
+// Hello.java
+public class Hello {
+    public static void main(String[] args) {
+        World world = new World();
+        // 我们需要先创建一个 Thread 对象, 线程名字叫 "world"
+        Thread world1 = new Thread(world, "world");
+        // 然后再让线程开始
+        world1.start();
+        for(;;) {
+            System.out.println("Hello");
+        }
+    }
+}
+```
+
+我们可以通过 `Thread.currentThread().getName()` 来获取当前线程的名字。
+
+
+
+那么，两种方法都能够实现多线程，我们更推荐使用哪种呢？答案是 `Runnable`，因为其对比继承 `Thread` 有以下优势：
+
+1. **避免单继承的局限性**
+   * Java 不支持多继承，所以一个类只能有一个父类。如果你继承了 Thread 类，那你就没办法继承其他类了
+   * Java 支持实现多个接口，你的类可以继承别的类，同时实现 Runnable 接口，这让程序设计更加灵活
+2. **更好地分离任务与执行**
+   * `Runnable` 只关心“做什么”（任务代码），而 `Thread` 只关心“如何执行”（线程的创建、启动、管理）。这种**解耦**是更优秀的面向对象设计思想。
+   * 多个线程可以共享同一个 `Runnable` 实例，这在处理需要共享数据的场景下很方便。而 `extends Thread` 的方式中，每个线程都是一个新对象，共享数据会相对麻烦一些。
+3. **代码更清晰**
+   * 一般看到 `implements Runnable` 就知道这个类是一个“任务”，而 `extends Thread` 则表示这个类是一个“线程”，在语义上，前者通常更能准确地描述意图。
+
+所以在实际开发中，**优先推荐使用实现** `Runnable` **接口的方法来创建多线程**。
+
+
+
+#### 3.2 线程的生命周期 (Thread Lifecycle)
+
+在 Java 中，线程的生命周期被明确地定义为 `java.lang.Thread.State` 这个枚举里面地六种状态：
+
+1. **新建状态 (NEW)**：当使用 `new` 关键字创建了一个 `Thread` 对象，但还没有调用它的 `start()` 方法时，线程就处于这个状态
+2. **可运行状态 (RUNNABLE)**：当调用了线程的 `start()` 方法后，线程就进入了可运行状态。它包含了操作系统线程状态中的**就绪 (Ready)** 和**运行中 (Running)** 两种状态。
+   * 就绪 (Ready)：线程已经准备好了一切，只等待 CPU 调度器分配时间片。
+   * 运行中 (Running)：线程获得了 CPU 时间片，正在执行 `run()` 方法中的代码。
+3. **阻塞状态 (BLOCKED)**：一个线程试图获得一个由其他线程持有的 `synchronized` **同步锁** 时，它就会进入阻塞状态。只有当那个线程释放了锁，这个线程才有机会从阻塞状态进入可运行状态。
+4. **等待状态 (WAITING)**：一个线程调用了没有设置超时时间的 `Object.wait()`、`Thread.join()` 或者 `LockSupport.park()` 方法后，会进入无限期等待状态。它需要等待其他线程执行一个特定的唤醒动作 (`notify()` 或 `notifyAll()`)
+5. **限时等待状态 (TIMED_WAITING)**：与 `WAITING` 类似，但有一个明确的等待时间。当线程调用了带超时参数的方法，例如 `Thread.sleep(long a)`，`Object.wait(long a)` 或 `Thread.join(long a)` 等，就会进入此状态。时间一到，或者被其他线程唤醒，就会回到可运行状态
+6. **终止状态 (TERMINATED)**：当线程的 `run()` 方法执行完毕，或者因未捕获的异常而退出时，线程的生命周期就结束了，进入终止状态。
+
+状态可以被解释如下：
+
+`NEW` -- `start()` --> `RUNNABLE`
+
+`RUNNABLE` <--> `BLOCKED` (因 `synchronized` 锁)
+
+`RUNNABLE` --> `WAITING` / `TIMED_WAITING` (因 `wait`, `join`, `sleep` 等)
+
+`WAITING` / `TIMED_WAITING` -- `notify`, `interrupt`, 超时 --> `RUNNABLE`
+
+`RUNNABLE` -- `run()` 结束 --> `TERMINATED`
+
+
+
+#### 3.3 Thread 类的一些方法
+
+我们前面已经讲了 Thread 类的 `.run()` 和 `.start()` 方法，现在我们来讲讲 Thread 类的其他方法。
+
+
+
+第一个是 `Thread.sleep()` 方法，这个方法的作用是：强制**当前正在执行的线程**暂停指定的毫秒数。当其调用 `sleep()` 方法时，它的状态会从 `RUNNABLE` 变为 `TIMED_WAITING`。
+
+并且，这个方法是一个**静态方法**，所以无论你用哪个线程对象去调用它，例如 `t1.sleep(1000)`，`t2.sleep(1000)`，实际效果都是让**当前正在执行这个代码的线程**去睡眠。因此，最规范，最清晰的写法就是直接使用类名调用 `Thread.sleep(1000)`。
+
+在使用 `Thread.sleep()` 方法时，编译器会强制你用 `try-catch` 包裹起来，或者在方法上声明 `throws InterruptedException`。因为 `sleep()` 函数就像一个线程正在睡觉，但是是可以被“打断”的。当其他线程调用了当前这个线程的 `interrupt()` 方法时，睡眠会被立刻终止，然后 `sleep()` 方法会抛出一个 `InterruptedException` 异常，同时线程的中断状态标志会被清除。这样，就是为了让我们有机会在线程被**意外叫醒时**，能够执行一些必要的清理或者响应工作。
+
+```java
+public class MyThread extends Thread {
+    @Override
+    public void run() {
+		for(int i = 1; i <= 5; i++) {
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+            System.out.println(i);
+        }
+    }
+    public static void main(String[] args) {
+        MyThread t1 = new MyThread();
+        t1.start();
+    }
+}
+```
+
+这样输出就是每一秒输出一个字符，且字符代表秒数。即：
+
+```
+(等待 1 秒)
+1
+(等待 1 秒)
+2
+(等待 1 秒)
+3
+(等待 1 秒)
+4
+(等待 1 秒)
+5
+```
+
+
+
+第二个是 `.join()` 方法，这个方法的作用是：让**当前线程等待调用的线程完成**。即让**当前线程**进入**等待状态 (WAITING)**，直到**目标线程**执行完毕（生命周期进入 `TERMINATED`）。
+
+例如下述代码：
+
+```java
+public class MyThread extends Thread {
+    @Override
+    public void run() {
+		for(int i = 1; i <= 5; i++) {
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+            System.out.println(i);
+        }
+    }
+    public static void main(String[] args) {
+        System.out.println("A");
+        MyThread t1 = new MyThread();
+        t1.start();
+        t1.join();
+        System.out.println("B");
+    }
+}
+```
+
+当代码开始执行时，JVM 会先执行 main 线程，这时候会先输出一个 `A`，然后当 `t1` 线程创建后，我们再 `join()`，`main` 线程就会等待 `t1` 线程执行完毕，然后再输出一个 `B`。即：
+
+```
+A
+(等待 1 秒)
+1
+(等待 1 秒)
+2
+(等待 1 秒)
+3
+(等待 1 秒)
+4
+(等待 1 秒)
+5
+B
+```
+
+
+
+第三个是 `.setPriority()` 方法。当很多线程都处于 `RUNNABLE` 状态时，它们会争抢宝贵的 CPU 时间片。操作系统中的**线程调度器 (Thread Scheduler)** 负责决定下一个瞬间到底让哪个线程在 CPU 上运行。
+
+**线程优先级**就是我们给调度器的一个**“建议”或者“提示”**，一个优先级更高的线程会**更有可能**被调度器选中来执行，但这**不是一个硬性的保证**。线程调度器有最终决定权，他可能会因为其他原因（例如某个低优先级的线程已经等待了太久）而先去执行一个低优先级的线程。
+
+Java 线程的优先级被设定位 `1` 到 `10` 的整数。数字越大，优先级越高。`Thread` 类里定义了三个静态常量：
+
+* `Thread.MIN_PRIORITY`：最低优先级，值为 1。
+* `Thread.NORM_PRIORITY`：普通或者默认优先级，值为 5。
+* `Thread.MAX_PRIORITY`：最高优先级，值为 10。
+
+我们可以使用 `setPriority(int newPriority)` 方法来改变一个线程的优先级。例如 `t1.setPriority(Thread.MAX_PRIORITY)`。你可以在线程启动或者启动后设置它的优先级。
+
+经过测试，优先级较高的线程会比较低的线程获得更多的 CPU 时间。用的是以下的例子进行测试：
+
+```java
+public class Test {
+    public static void main(String[] args) {
+        Runnable task = () -> { // 这个是 lambda 表达式，前面有提到，后面会详细讲
+            for(int i = 1; i <= 1000; i++){
+                System.out.println(Thread.currentThread().getName() + " running: " + i);
+            }
+        };
+        
+        Thread highPriorityThread = new Thread(task, "HighPriority");
+        Thread lowPriorityThread = new Thread(task, "LowPriority");
+        highPriorityThread.setPriority(Thread.MAX_PRIORITY);
+        lowPriorityThread.setPriority(Thread.MIN_PRIORITY);
+        lowPriorityThread.start();
+        highPriorityThread.start();
+    }
+}
+```
+
+主播的电脑是 i7-14700hx，所以性能可能比较好，差异比较大，最后测试的结果是：
+
+![](./img/Backend/java-8.png)
+
+但是，请**不要滥用线程优先级！**原因如下：
+
+1. 这个**只是一个”提示“**，它不是命令。调度器完全可以无视你的优先级设置。
+2. **平台依赖性极强**：Java 的 10 个优先级等级如何映射到你的操作系统底层的优先级是**不确定**的。在 Windows 上，优先级 8 和 9 可能没区别；但在 Linux 上，它们可能差异巨大。这导致你的程序在不同系统上的行为可能完全不同。
+3. **可能导致线程饥饿 (Starving)**：如果一个系统非常繁忙，低优先级的线程可能长时间得不到 CPU 时间，永远无法完成它的任务，这就是“线程饥饿”，是一个严重的 BUG。
+
+
+
+`t1.yield()` 的作用
+
+
+
+`t1.interrupt()`
+
+
+
+`t1.setDaemon()`，什么是用户线程？
+
+
+
+### 4. Java Collections Framework & Streams
+
+> 本板块目前是通过速成课进行学习，系统学习后的笔记未来会更新
+
+#### 4.1 List 篇
+
+
+
+##### 4.1.1 ArrayList
+
+ArrayList 实际上使用一个数组来存储实际元素。在我们使用 java 中数组时，我们通常需要考虑到其上限容量。当我们使用 `ArrayList` 时，我们就不需要担心上限了，因为只要我们向数组列表中添加元素，这个数组就会扩大它的容量。
+
+我们可以通过 `.add()` 来添加元素，用 `.remove()` 来删除元素。但请注意，删除会消耗更多的时间，因为当删除一个元素后，就会产生一个空隙，这个空隙需要右边所有的元素左移一位来补全 (`.remove()` 的时间复杂度是 $O(n)$ )。
+
+我们可以通过 `.contains()` 来看这个元素是否存在于 `ArrayList` 中，时间复杂度也是 $O(n)$
+
+我们也可以通过 ·`.isEmpty()` 方法来查看 `ArrayList` 是否为空
+
+我们可以通过 `.clear()` 方法来删除 `ArrayList` 中的所有元素
+
+```java
+import java.util.ArrayList;
+public class Main {
+    public static void main(String[] args) {
+        ArrayList<String> people = new ArrayList<>();
+        people.add("John"); // 可以通过这样加入一个元素
+        people.add("Dave");
+        people.add("Jane");
+        
+        people.remove("Dave"); // 可以通过指定一个元素来删除
+        people.remove(1); // 也可以指定元素的下标来删除
+        
+        if (people.contains("John")) { // 通过这个来查看元素是否存在于 ArrayList 中
+            System.out.println("John is in the list");
+        }
+        
+        if (people.isEmpty()) {
+            System.out.println("The list is empty!");
+        }
+        
+        people.clear();
+    }
+}
+```
+
+当我们需要**随机访问**，**不需要频繁执行删除操作**，**内存效率**时，我们应该使用 `ArrayList`，因为 `ArrayList` 可以通过下标在 $O(1)$ 的时间复杂度中查找到元素 (随机访问)；并且 `ArrayList` 使用的是连续的内存空间 (内存效率)；但是 `ArrayList` 的删除操作时间复杂度较高 (不需要频繁执行删除操作)。
+
+
+
+##### 4.1.2 LinkedList
+
+`LinkedList` 与 `ArrayList` 的区别是，`LinkedList` 使用的是单独的节点存储，后一个节点跟前一个结点相连，因此我们可以从第一个节点到最后一个节点遍历列表，反过来也可以遍历列表。
+
+与 `ArrayList` 相似，我们可以使用 `.add()`，`.remove()`，`.clear()` 函数，但是这里的 `.remove()` 方法的时间复杂度是 $O(1)$，因为它不需要像 `ArrayList` 一样左移元素。
+
+```java
+import java.util.LinkedList
+public class Main {
+    public static void main(String[] args) {
+        LinkedList<Integer> list = new LinkedList<>();
+        list.add(1);
+        list.add(2);
+        list.add(3);
+        
+        list.remove(0); // 我们可以通过索引来删除元素
+        list.remove(Integer.valueOf(3)); // 我们也可以通过元素的值来删除元素
+        
+        list.clear(); // 我们可以清空整个列表
+    }
+}
+```
+
+与 `ArrayList` 不同的是，`LinkedList` 也可以当成是**一个队列**，它遵循 **FIFO (First-In First-Out)** 原则。它有这另外两个函数 `.offer()` 和 `.poll()`，也是用来添加与删除元素的。但是它们与 `.add()` 和 `.remove()` 的区别是，它们不会**抛出异常**。当 `.offer()` 发现队列满了，就会返回 `false`；当 `.poll()` 发现队列空了，则会返回 `null`。
+
+```java
+import java.util.LinkedList
+public class Main {
+    public static void main(String[] args) {
+        LinkedList<Integer> list = new LinkedList<>();
+        list.offer(1);
+        list.offer(2);
+        list.offer(3);
+        
+        System.out.println(list.poll()); // 1
+        System.out.println(list.poll()); // 2
+        System.out.println(list.poll()); // 3
+    }
+}
+```
+
+更有趣的是，`LinkedList` 实际上也可以被看做是一个**栈**，它遵循 **FILO (First-In Last-Out)** 原则。它有 `.push()` 和 `.pop()` 方法
+
+```java
+import java.util.LinkedList
+public class Main {
+    public static void main(String[] args) {
+        LinkedList<Integer> list = new LinkedList<>();
+        list.push(1);
+        list.push(2);
+        list.push(3);
+        
+        System.out.println(list.pop()); // 3
+        System.out.println(list.pop()); // 2
+        System.out.println(list.pop()); // 1
+    }
+}
+```
+
+
+
+#### 4.2 Queue 篇
+
+这里主要讲的是 `PriorityQueue` 类，它提供了队列的功能，所以也拥有 `.offer()` 和 `.poll()` 函数。它默认是**从小到大**进行排序的，但我们可以通过 `Comparator` 来重载它的构造函数，调整它的比较方法。
+
+```java
+import java.util.Comparator;
+import java.util.PriorityQueue;
+public class Main {
+    static class UserProfile {
+        private final Integer age;
+        public UserProfile(Integer age) {
+			this.age = age;
+        }
+       	public Integer getAge() {
+            return age;
+        }
+    }
+    public static void main(String[] args) {
+        PriorityQueue<UserProfile> usersQueue = new PriorityQueue<>(
+        	Comparator.comparing((UserProfile u) -> u.age);
+        );
+        usersQueue.offer(new UserProfile(20));
+        usersQueue.offer(new UserProfile(30));
+        usersQueue.offer(new UserProfile(40));
+        
+        System.out.println(usersQueue.poll().age); // 20
+    }
+}
+```
+
+
+
+#### 4.3 Set 篇
+
+
+
+#### 4.4 Map 篇
+
+##### 4.4.1 HashMap 篇
+
+`HashMap` 是基于**哈希表**的一种数据结构。它可以将存储许多**键值对**。它有两个方法，`.put(key, value)` 存入键值对，以及 `.get(key)` 来查看映射的值，这两个函数的时间复杂度都是 $O(1)$。
+
+`HashMap` 允许使用 `.keySet()`，`.values()`，`.entrySet()` 来遍历，但**不保证遍历顺序与插入顺序一致**。
+
+`HashMap` 允许使用 `.containsKey()` 来查看是否存在某个键
+
+```java
+import java.util.HashMap;
+public class Main {
+    public static void main(String[] args) {
+        Map<String, Integer> populationByCity = new HashMap<>();
+        
+        populationByCity.put("New York", 230021);
+        populationByCity.put("Las Vegas", 112234);
+        
+        Integer population = populationByCity.get("New York");
+        
+        if (populationByCity.containsKey("New York")) {
+			System.out.println("We got New York's population");
+        }
+        
+        for (Map.Entry<String, Integer> entry : population.entrySet()) {
+            System.out.println(entry.getKey() + " " + entry.getValue());
+        }
+    }
+}
+```
+
+
+
+##### 4.4.2 LinkedHashMap
+
+`LinkedHashMap` 与 `HashMap` 一致，只不过它是**有序**的。如果需要**保持插入顺序**，则可以使用 `LinkedHashMap`。
+
+
+
+##### 4.4.3 TreeMap
+
+
+
+
+
+### 5. Java Spring Boot 框架
+
+> 本版块目前是通过速成课进行学习，系统学习后的笔记未来会更新
+
+
+
+
+
+## MySQL 篇
+
+> 本版块目前是通过速成课进行学习，系统学习后的笔记未来会更新
+
+
+
+
+
+## Redis 篇
+
+> 本版块目前是通过速成课进行学习，系统学习后的笔记未来会更新
