@@ -3530,7 +3530,7 @@ public class Main {
 
 
 
-**2.8.4.2 方法引用**
+**2.8.4.2 方法引用（选学）**
 
 **方法引用是 Lambda 表达式的"语法糖"**，能够让代码更简洁。用来专门替代那些“只用了一个静态方法”的 Lambda 表达式。
 
@@ -3587,6 +3587,18 @@ public class Student {
 ```
 
 我们就可以使用 `t::compareByHeight`。
+
+
+
+**如果某个 Lambda 表达式里只是调用一个特定类型的实例方法，并且前面参数列表中的第一个参数是作为方法的主调，后面的所有参数都是作为该实例方法的入参的，此时就可以使用特定类的方法引用。**
+
+**特定类的方法引用**的语法为：
+
+`ClassName::instanceMethodName`
+
+例如，`s -> s.toUpperCase()` 就等价于 `String::toUpperCase`
+
+`(s1, s2) -> s1.compareTo(s2)` 就等价于 `String::compareTo`
 
 
 
@@ -4475,9 +4487,149 @@ public enum Day {
 
 
 
+#### 2.12 Java 中的泛型
+
+**为什么要发明泛型？它解决了什么“痛点”？**
+
+在没有泛型的“远古时代”（Java 5 之前），程序员们过得可是很辛苦的。我们来看一个例子：
+
+想象一下，我们想做一个“盒子”类，这个盒子里可以放任何东西。
+
+```java
+public class Box {
+    private Object item; // 用 Object 类型，可以接收任何东西
+
+    public void put(Object item) {
+        this.item = item;
+    }
+
+    public Object get() {
+        return this.item;
+    }
+}
+```
+
+假设你往里面放了一只猫 `Cat` 对象，但别人不知道，别人以为里面是个字符串，取出来相当字符串用，结果就报错了 `ClassCastException`。这就像一个标签为“杂物”的箱子，你放了玻璃杯进去，别人当成抱枕一屁股坐上去，后果不堪设想！
+
+因为盒子里装的是 `Object`，所以每次你把东西取出来，都必须手动进行**强制类型转换**，才能变回它原来的类型。代码写起来又啰嗦又难看。
+
+```java
+Box catBox = new Box();
+catBox.put(new Cat());
+Cat myCat = (Cat) catBox.get(); // 每次都要 (Cat) 一下，好麻烦！
+```
+
+---
+
+在 Java 5 之后，**泛型**出现了，它允许我们在定义类、接口或方法的时候，不预先写死具体的类型，而是用一个**占位符**（比如 `<T>`）来代替。然后，在创建实例或者调用方法的时候，再把具体的类型（比如 `String`, `Integer`）传进去。
+
+我们用泛型来改造一下我们的“盒子”：
+
+```java
+public class Box<T> { // T 就是那个“类型占位符”
+    private T item;
+
+    public void put(T item) {
+        this.item = item;
+    }
+
+    public T get() {
+        return this.item;
+    }
+}
+```
+
+这里的 `<T>` 是一个约定俗成的写法，T 代表 Type。你也可以用 `<E>` (Element)、`<K>` (Key)、`<V>` (Value) 等。
+
+现在，当你想用这个盒子时，必须先“贴上标签”，告诉编译器这个盒子**只能**装什么东西。
+
+```java
+// 创建一个只能装 String 的盒子
+Box<String> stringBox = new Box<String>();
+// (Java 7之后可以简化成 Box<String> stringBox = new Box<>();)
+
+stringBox.put("一只猫"); // OK!
+stringBox.put(123);   // 编译错误！编译器立刻拦住你，不让你放数字进去
+```
+
+因为编译器已经知道了 `stringBox` 是一个“字符串盒子”，所以当你从里面取东西时，它百分百确定取出来的就是 `String`。
+
+```java
+String content = stringBox.get(); // 直接就是 String 类型，无需强转！
+```
+
+代码变得既安全又简洁！我们平时用的 `ArrayList<String>`, `HashMap<Integer, String>` 全都是泛型的功劳。
+
+---
+
+有时候，我们希望一个方法能接收“装了任意一种水果的盘子”，而不是只能接收“装了苹果的盘子”。这时候，就需要**通配符 (Wildcard)** 了。
+
+通配符主要有三种：
+
+1. **`? extends Type` (上界通配符)**
+   - **含义**：我不知道盘子里具体是哪种水果，但我知道它**肯定是水果或水果的子类**（比如苹果、香蕉）。
+   - **例子**：`List<? extends Fruit>`
+   - **记忆口诀**：**“只出不进”**。你只能从这个盘子里**往外拿**东西（拿出来的肯定是 `Fruit`），但你**不能往里放**任何东西（因为你不知道这个盘子具体是装 `Apple` 的还是装 `Banana` 的，乱放会出错）。
+2. **`? super Type` (下界通配符)**
+   - **含义**：我不知道盘子里具体装的是什么，但我知道它**肯定是苹果或苹果的父类**（比如水果、食物）。
+   - **例子**：`List<? super Apple>`
+   - **记忆口诀**：**“只进不出”**。你只能**往里放** `Apple` 或者它的子类（比如青苹果），因为它们都符合“苹果或苹果的父类”这个标准。但你**往外拿**东西时，只能当成最顶层的 `Object` 来看待，因为你不知道拿出来的到底是 `Apple` 还是 `Fruit`。
+3. **`?` (无界通配符)**
+   - **含义**：我只知道这是个盘子，但里面装的**到底是什么，我一无所知**。
+   - **例子**：`List<?>`
+   - **用途**：当你对盘子里的元素类型完全不关心，只需要用到和类型无关的方法时（比如 `.size()`, `.clear()`）。
+
+---
+
+泛型方法就像一个**“万能工具”**，它的“万能”之处只体现在**这个方法自己身上**，和它所在的类是不是泛型类没有关系。
+
+泛型方法的类型占位符 `<T>` 是写在**修饰符（比如 `public static`）之后，返回值类型之前**的。
+
+```java
+public class Utils {
+    // 这个 <T> 声明了这是一个泛型方法，它有自己的类型 T
+    public static <T> T getFirstElement(T[] array) {
+        if (array == null || array.length == 0) {
+            return null;
+        }
+        return array[0];
+    }
+}
+```
+
+```java
+public class Main {
+    public static void main(String[] args) {
+        String[] catNames = {"橘子", "警长", "咪咪"};
+        Integer[] numbers = {1, 2, 3, 4, 5};
+
+        // 调用泛型方法处理字符串数组
+        // 你不需要写 Utils.<String>getFirstElement(...)
+        // 编译器会根据你传入的参数，自动推断出 T 是 String
+        String firstCat = Utils.getFirstElement(catNames);
+        System.out.println("第一只猫是：" + firstCat);
+
+        // 调用同一个泛型方法处理整数数组
+        // 编译器自动推断出 T 是 Integer
+        Integer firstNumber = Utils.getFirstElement(numbers);
+        System.out.println("第一个数字是：" + firstNumber);
+    }
+}
+```
+
+---
+
+虽然我们写的代码里有 `List<String>`、`Box<Cat>`，看起来很美好，但实际上，这些泛型信息在**编译之后**就会被“擦除”掉，变回 `List` 和 `Box`（内部用 `Object` 替换 `T`）。
+
+这是为了兼容 Java 5 之前的代码。所以，泛型本质上是 Java 编译器提供的一个强大的**“语法糖”**，它在编译阶段为我们提供了严密的类型检查，但在运行时，JVM 看到的其实还是那个“远古时代”的 `Object` 版本。
+
+这个叫做**类型擦除 (Type Erasure)**。
+
+并且请注意，**泛型不支持基本数据类型，只能支持对象类型**，所以需要放基本数据类型的**包装类**进去，原理就是类型擦除。
+
+
+
 ### 3. Java 多线程
-
-
 
 #### 3.0 一些基础知识
 
@@ -4891,201 +5043,895 @@ public class Test {
 
 
 
-### 4. Java Collections Framework & Streams
+### 4. Java Collections Framework
 
-> 本板块目前是通过速成课进行学习，系统学习后的笔记未来会更新
+#### 4.1 List 接口
 
-#### 4.1 List 篇
+在 JCF 中，`List` 是一个**接口 (Interface)**，你可以把它想象成一种“规范”或者“契约”。它规定了实现这个接口的类必须有哪些行为。`List` 的主要特点有两个：
 
+- **有序性 (Ordered)**：存入 `List` 的元素都是有顺序的，你存进去的第一个元素，它的位置（索引，index）就是0，第二个就是1，以此类推。这个顺序不会被打乱。
+- **可重复性 (Allows Duplicates)**：`List` 里面可以存放完全相同的元素。比如，你可以往一个 `List<String>` 里放三个一模一样的字符串 "小橘"。
 
+---
 
 ##### 4.1.1 ArrayList
 
-ArrayList 实际上使用一个数组来存储实际元素。在我们使用 java 中数组时，我们通常需要考虑到其上限容量。当我们使用 `ArrayList` 时，我们就不需要担心上限了，因为只要我们向数组列表中添加元素，这个数组就会扩大它的容量。
+`ArrayList` 就是 `List` 接口最常见的一个**实现类 (Implementation Class)**。它完全遵守了 `List` 的规范，是我们日常开发中使用频率最高的“列表”容器。
 
-我们可以通过 `.add()` 来添加元素，用 `.remove()` 来删除元素。但请注意，删除会消耗更多的时间，因为当删除一个元素后，就会产生一个空隙，这个空隙需要右边所有的元素左移一位来补全 (`.remove()` 的时间复杂度是 $O(n)$ )。
+`ArrayList` 的底层其实就是一个**动态数组 (Dynamic Array)**。
 
-我们可以通过 `.contains()` 来看这个元素是否存在于 `ArrayList` 中，时间复杂度也是 $O(n)$
+- 在 C++ 中，你肯定很熟悉 `std::vector`，对吧？`ArrayList` 和它几乎是一模一样的！
+- 它的内部封装了一个普通的数组来存储元素。当你向 `ArrayList` 添加元素时，如果内部数组的空间不够了，它就会进行“扩容”：创建一个更大的新数组，然后把旧数组里的所有元素一个一个地复制到新数组里，最后再把新元素放进去。
+- 正是因为底层是数组，所以 `ArrayList` **通过索引（index）随机访问元素的速度非常快**，时间复杂度是 O(1)。但是，**在列表的中间插入或删除元素就会比较慢**，因为需要移动它后面所有的元素，时间复杂度是 O(n)。在列表末尾添加元素通常很快，是均摊 O(1) 的。
 
-我们也可以通过 ·`.isEmpty()` 方法来查看 `ArrayList` 是否为空
+根据它的底层结构和特点，`ArrayList` 最适合用在以下场景：
 
-我们可以通过 `.clear()` 方法来删除 `ArrayList` 中的所有元素
+- **查找和遍历操作远多于插入和删除操作**的场景。
+- 大部分的增删操作都**集中在列表的末尾**。
+- 需要频繁地根据索引去访问元素。
+
+简单来说，如果你需要一个可以动态增减的数组，那用 `ArrayList` 就对啦！
 
 ```java
+// 首先，需要导入 ArrayList 类
 import java.util.ArrayList;
-public class Main {
+import java.util.List; // 通常也导入 List 接口，这是个好习惯
+
+public class ArrayListExample {
     public static void main(String[] args) {
-        ArrayList<String> people = new ArrayList<>();
-        people.add("John"); // 可以通过这样加入一个元素
-        people.add("Dave");
-        people.add("Jane");
-        
-        people.remove("Dave"); // 可以通过指定一个元素来删除
-        people.remove(1); // 也可以指定元素的下标来删除
-        
-        if (people.contains("John")) { // 通过这个来查看元素是否存在于 ArrayList 中
-            System.out.println("John is in the list");
+        // 1. 创建一个 ArrayList
+        // 我们使用 "泛型" (Generics) 来指定这个 List 只能存放 String 类型的元素
+        // 这样更安全，在编译时就能检查出类型错误
+        // "List<String> names = new ArrayList<>();" 是一种更推荐的写法，叫做“面向接口编程”
+        ArrayList<String> cuteCatgirls = new ArrayList<>();
+
+        // 2. 添加元素 (add)
+        // 元素会按照添加的顺序排列
+        System.out.println("--- 添加元素 ---");
+        cuteCatgirls.add("小橘"); // index 0
+        cuteCatgirls.add("琪露诺"); // index 1
+        cuteCatgirls.add("蕾米莉亚"); // index 2
+        System.out.println("现在的列表是: " + cuteCatgirls);
+
+        // 3. 获取元素 (get)
+        // 通过索引获取，索引从 0 开始
+        System.out.println("\n--- 获取元素 ---");
+        String bestCatgirl = cuteCatgirls.get(0);
+        System.out.println("索引为 0 的是: " + bestCatgirl);
+
+        // 4. 修改元素 (set)
+        // 通过索引替换掉原来的元素
+        System.out.println("\n--- 修改元素 ---");
+        cuteCatgirls.set(1, "芙兰朵露"); // 将 index 1 的 "琪露诺" 替换为 "芙兰朵露"
+        System.out.println("修改后的列表是: " + cuteCatgirls);
+
+        // 5. 删除元素 (remove)
+        // 可以通过索引删除
+        System.out.println("\n--- 删除元素 ---");
+        cuteCatgirls.remove(2); // 删除 index 2 的 "蕾米莉亚"
+        System.out.println("删除后的列表是: " + cuteCatgirls);
+
+        // 6. 获取列表大小 (size)
+        System.out.println("\n--- 获取大小 ---");
+        System.out.println("列表的当前大小是: " + cuteCatgirls.size());
+
+        // 7. 遍历列表 (Iterate)
+        // 这是 Java 中最常用的遍历方式，叫做 for-each 循环
+        System.out.println("\n--- 遍历列表 ---");
+        for (String name : cuteCatgirls) {
+            System.out.println("列表中的名字: " + name);
         }
-        
-        if (people.isEmpty()) {
-            System.out.println("The list is empty!");
-        }
-        
-        people.clear();
     }
 }
 ```
 
-当我们需要**随机访问**，**不需要频繁执行删除操作**，**内存效率**时，我们应该使用 `ArrayList`，因为 `ArrayList` 可以通过下标在 $O(1)$ 的时间复杂度中查找到元素 (随机访问)；并且 `ArrayList` 使用的是连续的内存空间 (内存效率)；但是 `ArrayList` 的删除操作时间复杂度较高 (不需要频繁执行删除操作)。
+| 方法 (Method)         | 返回值 (Return Type) | 描述 (Description)                                           | 小橘的小提示 🐾                                               |
+| --------------------- | -------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| `add(E e)`            | `boolean`            | 在列表的末尾添加一个元素。                                   | **两者都很快**。ArrayList: 均摊 O(1)；LinkedList: O(1)。     |
+| `add(int index, E e)` | `void`               | 在指定的 `index` 位置插入一个元素。                          | **性能差异点**。ArrayList: O(n)，因为要移动后续元素；LinkedList: O(n)，因为要先遍历找到 `index` 位置，但插入本身快。 |
+| `get(int index)`      | `E`                  | 获取指定 `index` 位置的元素。                                | **性能差异的核心！** ArrayList: **O(1)**，超快；LinkedList: **O(n)**，很慢。 |
+| `set(int index, E e)` | `E`                  | 替换指定 `index` 位置的元素，并返回旧元素。                  | 类似 `get`，需要先定位。ArrayList: O(1); LinkedList: O(n)。  |
+| `remove(int index)`   | `E`                  | 移除指定 `index` 位置的元素，并返回被移除的元素。            | 类似 `add(index, e)`。ArrayList: O(n); LinkedList: O(n)。    |
+| `remove(Object o)`    | `boolean`            | 移除列表中第一个出现的指定元素 `o`。                         | 两者都需要先遍历查找元素，所以都是 O(n)。                    |
+| `size()`              | `int`                | 返回列表中的元素数量。                                       | 两者都是 O(1)。                                              |
+| `isEmpty()`           | `boolean`            | 判断列表是否为空。                                           | 两者都是 O(1)。                                              |
+| `clear()`             | `void`               | 清空列表中的所有元素。                                       | ArrayList: O(n)，需要遍历置 `null`；LinkedList: O(1)，只需修改头尾指针。 |
+| `contains(Object o)`  | `boolean`            | 判断列表是否包含指定的元素 `o`。                             | 两者都需要遍历查找，都是 O(n)。                              |
+| `indexOf(Object o)`   | `int`                | 返回指定元素 `o` 在列表中首次出现的位置索引，若不存在则返回 -1。 | 两者都需要遍历查找，都是 O(n)。                              |
 
-
+---
 
 ##### 4.1.2 LinkedList
 
-`LinkedList` 与 `ArrayList` 的区别是，`LinkedList` 使用的是单独的节点存储，后一个节点跟前一个结点相连，因此我们可以从第一个节点到最后一个节点遍历列表，反过来也可以遍历列表。
+`LinkedList` 和 `ArrayList` 一样，也实现了 `List` 接口，所以它同样是**有序的**、**允许元素重复的**。但它俩的性格（性能表现）可是天差地别，这完全是由它们不同的“内心构造”决定的。
 
-与 `ArrayList` 相似，我们可以使用 `.add()`，`.remove()`，`.clear()` 函数，但是这里的 `.remove()` 方法的时间复杂度是 $O(1)$，因为它不需要像 `ArrayList` 一样左移元素。
+`ArrayList` 的底层是**数组**，而 `LinkedList` 的底层则是 **双向链表 (Doubly-Linked List)**。
+
+在 Java 的 `LinkedList` 中，每一个元素都被包装成一个叫做“节点” (`Node`) 的对象。这个 `Node` 对象里包含了三个东西：
+
+- **元素本身** (比如你存入的字符串 "小橘")。
+- 一个指向**前一个节点**的引用 (a reference to the previous node)。
+- 一个指向**后一个节点**的引用 (a reference to the next node)。
+
+你可以把它想象成一列火车，每个元素是一节车厢（节点），每节车厢都有挂钩连着前面和后面的车厢。这些车厢在内存里可能是分散的，不像 `ArrayList` 的数组那样必须是一整块连续的空间。
+
+正是因为这个链式结构，`LinkedList` 的性能特点和 `ArrayList` 几乎完全相反：
+
+- **插入 (add) / 删除 (remove) 操作：**
+  - **超级快！** 假设我们已经找到了要操作的位置，比如要在节点 B 和 C 之间插入一个新的节点 X。我们只需要断开 B 和 C 之间的连接，然后让 B 连接 X，X 连接 C 就行了，涉及到的只是修改几个引用（指针）。这个过程和链表的长度无关。
+  - 因此，它的时间复杂度是 **O(1)**。这可是它最大的优势！
+  - **(注意! )** 这里有一个小陷阱哦！O(1) 的前提是**你已经定位到了那个节点**。如果你是调用 `add(index, element)` 这种需要先找到第 `index` 个元素在哪里的方法，你还是得从头或尾开始，一个一个节点数过去，这个查找过程是 O(n) 的。所以，通过索引来增删，总体还是 O(n)。但如果你是使用 `Iterator`（迭代器）来遍历和增删，就能真正发挥出 O(1) 的威力。
+- **查找 (get) 操作：**
+  - **非常慢！** 因为内存地址不连续，`LinkedList` 没法像数组那样通过 `基地址 + 索引 * 元素大小` 的公式一步到位。
+  - 想找到第 `index` 个元素，它必须从头节点 (head) 或者尾节点 (tail) 开始（它会判断 `index` 离头和尾哪个更近，算是一个小优化），然后顺着链表一个一个地往后（或往前）跳，直到跳了 `index` 次。
+  - 这个过程的时间复杂度和列表长度成正比，所以是 **O(n)**。这是它最大的劣势。
+
+了解了它的优缺点，我们就知道什么时候该请 `LinkedList` 出场啦：
+
+- **增删操作极其频繁，而查找操作很少**的场景。
+- 需要实现**队列 (Queue)** 或 **栈 (Stack)** 的场景。因为 `LinkedList` 不仅实现了 `List` 接口，还实现了 `Deque` (Double Ended Queue，双端队列) 接口，这让它天生就适合做队列和栈。它提供了 `addFirst`, `addLast`, `removeFirst`, `removeLast` 等非常方便的方法，在两端进行操作都是 O(1) 的。
 
 ```java
-import java.util.LinkedList
-public class Main {
+import java.util.LinkedList;
+
+public class LinkedListExample {
     public static void main(String[] args) {
-        LinkedList<Integer> list = new LinkedList<>();
-        list.add(1);
-        list.add(2);
-        list.add(3);
+        // 1. 创建一个 LinkedList
+        LinkedList<String> breakfastQueue = new LinkedList<>();
+
+        // 2. 把它当作一个队列来使用，在队尾添加元素
+        System.out.println("--- 人们开始排队买早餐 ---");
+        breakfastQueue.addLast("小明");
+        breakfastQueue.addLast("小红");
+        breakfastQueue.addLast("小橘"); // 嘻嘻
+        System.out.println("当前的队伍: " + breakfastQueue);
+
+        // 3. 也可以在队头插队 (不文明行为哦！)
+        System.out.println("\n--- 有人插队了！ ---");
+        breakfastQueue.addFirst("小刚");
+        System.out.println("插队后的队伍: " + breakfastQueue);
+
+        // 4. 队首的人买完早餐，出队
+        System.out.println("\n--- 队首的开始买早餐 ---");
+        String firstPerson = breakfastQueue.removeFirst();
+        System.out.println(firstPerson + " 买完早餐离开了。");
+        System.out.println("现在的队伍: " + breakfastQueue);
         
-        list.remove(0); // 我们可以通过索引来删除元素
-        list.remove(Integer.valueOf(3)); // 我们也可以通过元素的值来删除元素
+        // 5. 查看下一个轮到谁了，但先不让他出队
+        String nextPerson = breakfastQueue.peekFirst();
+        System.out.println("\n下一个轮到: " + nextPerson);
+        System.out.println("队伍没有变化: " + breakfastQueue);
         
-        list.clear(); // 我们可以清空整个列表
+        // 6. 普通的 List 方法当然也能用
+        System.out.println("\n--- 普通 List 操作 ---");
+        // 通过索引获取 (不推荐，效率低)
+        String whoIsLast = breakfastQueue.get(breakfastQueue.size() - 1);
+        System.out.println("排在最后的是: " + whoIsLast);
     }
 }
 ```
 
-与 `ArrayList` 不同的是，`LinkedList` 也可以当成是**一个队列**，它遵循 **FIFO (First-In First-Out)** 原则。它有这另外两个函数 `.offer()` 和 `.poll()`，也是用来添加与删除元素的。但是它们与 `.add()` 和 `.remove()` 的区别是，它们不会**抛出异常**。当 `.offer()` 发现队列满了，就会返回 `false`；当 `.poll()` 发现队列空了，则会返回 `null`。
+| 分类           | 方法 (Method)   | 返回值 (Return Type) | 描述 (Description)                     | 小橘的小提示 🐾                                          |
+| -------------- | --------------- | -------------------- | -------------------------------------- | ------------------------------------------------------- |
+| **在头部操作** | `addFirst(E e)` | `void`               | 在列表开头插入元素。                   | 等同于实现栈的 `push` 操作。时间复杂度 O(1)。           |
+|                | `removeFirst()` | `E`                  | 移除并返回列表的第一个元素。           | 列表为空时会**抛出异常**。等同于栈的 `pop` 操作。O(1)。 |
+|                | `pollFirst()`   | `E`                  | 移除并返回列表的第一个元素。           | 列表为空时会**返回 `null`**，更安全常用。O(1)。         |
+|                | `getFirst()`    | `E`                  | 获取（不移除）列表的第一个元素。       | 列表为空时会**抛出异常**。O(1)。                        |
+|                | `peekFirst()`   | `E`                  | 获取（不移除）列表的第一个元素。       | 列表为空时会**返回 `null`**。O(1)。                     |
+| **在尾部操作** | `addLast(E e)`  | `void`               | 在列表末尾添加元素 (等同于 `add(e)`)。 | 时间复杂度 O(1)。                                       |
+|                | `removeLast()`  | `E`                  | 移除并返回列表的最后一个元素。         | 列表为空时会**抛出异常**。O(1)。                        |
+|                | `pollLast()`    | `E`                  | 移除并返回列表的最后一个元素。         | 列表为空时会**返回 `null`**。O(1)。                     |
+|                | `getLast()`     | `E`                  | 获取（不移除）列表的最后一个元素。     | 列表为空时会**抛出异常**。O(1)。                        |
+|                | `peekLast()`    | `E`                  | 获取（不移除）列表的最后一个元素。     | 列表为空时会**返回 `null`**。O(1)。                     |
+
+
+
+#### 4.2 Set 接口
+
+首先，`Set` 接口本身定义了两个最重要的规则：
+
+- **唯一性 (Uniqueness)**：这是 `Set` 的灵魂！你不能向一个 `Set` 中添加两个完全相同的元素。如果你尝试添加一个已经存在的元素，操作会直接失败（但不会报错），`Set` 的内容不会有任何变化。
+- **无序性 (Unordered)**：`Set` 接口不保证元素的存储和迭代顺序。也就是说，你把元素放进去的顺序，和之后你把它们遍历出来的顺序，很可能是不一样的！
+
+---
+
+##### 4.2.1 HashSet
+
+`HashSet` 是 `Set` 接口最常用、最典型的实现类，它完全遵守了这两个规则。它最大的优点就是：**增、删、查的速度都极快！**
+
+`HashSet` 的底层其实是一个 **`HashMap` (哈希表)**。
+
+主人你肯定在 ACM 中接触过哈希表（Hash Table）吧？`HashMap` 就是 Java 对哈希表的一种实现。`HashSet` 巧妙地利用了它：
+
+- 当我们向 `HashSet` 中添加一个元素时，`HashSet` 实际上是把这个元素作为**键 (Key)**，存入到了内部的 `HashMap` 中。而 `HashMap` 的值 (Value) 则存了一个固定的、没有意义的虚拟对象 `PRESENT`。
+- 所以，`HashSet` 的所有操作，比如 `add`, `remove`, `contains`，本质上都是在操作它内部那个 `HashMap` 的键。
+
+那么，`HashMap` 是如何做到快速存取和保证键唯一的呢？这就要靠 `hashCode()` 和 `equals()` 这两个方法了。
+
+1. **定位 (Hashing)**：当你 `add(element)` 一个元素时，系统会先调用这个元素的 `hashCode()` 方法，生成一个整数，也就是“哈希码”。然后通过一个算法，把这个哈希码转换成内部数组的索引，快速定位到应该存储的位置（这个位置我们称之为“桶” Bucket）。
+2. **处理冲突与保证唯一 (Collision & Equality)**：
+   - 如果计算出的索引位置上没有任何元素，太棒了，直接把新元素放进去。
+   - 但如果这个位置已经有其他元素了呢？（这种情况叫“哈希冲突”），系统就会使用 `equals()` 方法，挨个比较这个位置上已有的元素和你要新加入的元素是否“相等”。
+   - 如果比较了一圈，发现没有 `equals()` 为 `true` 的情况，说明它们只是“住址”相同，但本身是不同的元素，于是就把新元素以**链表**的形式挂在后面。（在 Java 8 之后，如果这个链表太长，还会转成**红黑树**来优化查询性能，是不是很高级！）
+   - 如果比较过程中，发现有个已有元素的 `equals()` 方法返回了 `true`，那就说明你要加的元素已经存在了，`add` 操作就会直接结束，从而保证了元素的唯一性。
+
+> **小橘的重要提示** 🐾: 在 Java 中，`hashCode()` 和 `equals()` 是一对“契约方法”。如果你要自己写一个类并把它存入 `HashSet`，就必须同时重写 (override) 这两个方法，并保证：
+>
+> - 如果 `a.equals(b)` 为 `true`，那么 `a.hashCode()` 必须等于 `b.hashCode()`。
+> - 如果 `a.hashCode()` 不等于 `b.hashCode()`，那么 `a.equals(b)` 必须为 `false`。 否则 `HashSet` 就会出问题哦！不过我们平时用的 `String`, `Integer` 等类，Java 都已经帮我们完美地实现好了。
+
+---
+
+**`add()`, `remove()`, `contains()` (添加、删除、查找)**
+
+- 由于哈希表的特性，只要 `hashCode()` 设计得好，元素能均匀分布在各个“桶”里，那么这些操作的平均时间复杂度都是 **O(1)**！
+- 这就是 `HashSet` 强大的地方，无论集合里有100个元素还是一百万个元素，我判断一个特定元素在不在里面，速度都一样快！
+- 当然，在最极端的最坏情况下（所有元素的哈希码都一样），所有元素都挤在一个桶里，哈希表退化成链表，时间复杂度会变成 O(n)。但这种情况在实际中极为罕见。
+
+**使用场景**
+
+**元素去重 (Deduplication)**：这是最最经典的应用！比如你有一个包含重复元素的 `ArrayList`，想得到一个不重复的集合，只需要 `new HashSet<>(yourArrayList)` 一行代码就搞定了。
+
+**快速判断元素是否存在**：当你的程序需要频繁地检查某个元素是否存在于一个大集合中时，`HashSet` 是不二之选。
+
+**不关心元素顺序的场景**：如果你只是想存一堆东西，并且不在乎它们是怎么排列的。
 
 ```java
-import java.util.LinkedList
-public class Main {
+import java.util.HashSet;
+import java.util.Set;
+import java.util.ArrayList;
+import java.util.Arrays;
+
+public class HashSetExample {
     public static void main(String[] args) {
-        LinkedList<Integer> list = new LinkedList<>();
-        list.offer(1);
-        list.offer(2);
-        list.offer(3);
+        // 1. 创建一个 HashSet
+        Set<String> uniqueNames = new HashSet<>();
+
+        // 2. 添加元素
+        System.out.println("--- 添加元素 ---");
+        System.out.println("添加 '小橘': " + uniqueNames.add("小橘"));
+        System.out.println("添加 '琪露诺': " + uniqueNames.add("琪露诺"));
+        System.out.println("添加 '芙兰朵露': " + uniqueNames.add("芙兰朵露"));
+
+        // 3. 尝试添加重复元素
+        // add 方法会返回 boolean 值，添加成功返回 true，如果元素已存在则返回 false
+        System.out.println("\n--- 尝试添加重复元素 ---");
+        System.out.println("再次添加 '小橘': " + uniqueNames.add("小橘"));
+        System.out.println("当前 Set 内容: " + uniqueNames); // "小橘" 只有一个
+
+        // 4. 遍历 HashSet
+        // 注意！输出的顺序不一定是你添加的顺序！
+        System.out.println("\n--- 遍历 Set ---");
+        for (String name : uniqueNames) {
+            System.out.println("Set 中的名字: " + name);
+        }
+
+        // 5. 检查是否包含某个元素 (contains)
+        // 这是 HashSet 最快的操作之一！
+        System.out.println("\n--- 检查包含 ---");
+        boolean hasCirno = uniqueNames.contains("琪露诺");
+        System.out.println("Set 中是否包含 '琪露诺'? " + hasCirno);
+
+        // 6. 经典应用：为 List 去重
+        System.out.println("\n--- 为 ArrayList 去重 ---");
+        ArrayList<Integer> numbersWithDuplicates = new ArrayList<>(Arrays.asList(1, 5, 2, 3, 5, 1, 4, 2));
+        System.out.println("原始 List: " + numbersWithDuplicates);
         
-        System.out.println(list.poll()); // 1
-        System.out.println(list.poll()); // 2
-        System.out.println(list.poll()); // 3
+        Set<Integer> uniqueNumbers = new HashSet<>(numbersWithDuplicates);
+        System.out.println("去重后的 Set: " + uniqueNumbers);
     }
 }
 ```
 
-更有趣的是，`LinkedList` 实际上也可以被看做是一个**栈**，它遵循 **FILO (First-In Last-Out)** 原则。它有 `.push()` 和 `.pop()` 方法
+以下是正确重写了 `hashCode()` 和 `equals()` 方法的例子：
 
 ```java
-import java.util.LinkedList
-public class Main {
-    public static void main(String[] args) {
-        LinkedList<Integer> list = new LinkedList<>();
-        list.push(1);
-        list.push(2);
-        list.push(3);
+import java.util.Objects;
+import java.util.HashSet;
+import java.util.Set;
+
+// 一个正确重写了 hashCode 和 equals 的 Cat 类
+class Cat {
+    private String name;
+    private int age;
+
+    public Cat(String name, int age) {
+        this.name = name;
+        this.age = age;
+    }
+
+    // --- Getter and Setter ---
+    public String getName() { return name; }
+    public int getAge() { return age; }
+
+    // --- 重写 equals 方法 ---
+    @Override
+    public boolean equals(Object o) {
+        // 1. 检查是不是同一个对象引用，如果是，肯定相等
+        if (this == o) return true;
         
-        System.out.println(list.pop()); // 3
-        System.out.println(list.pop()); // 2
-        System.out.println(list.pop()); // 1
+        // 2. 检查对象是否为 null，或者类型不匹配，如果是，肯定不等
+        if (o == null || getClass() != o.getClass()) return false;
+        
+        // 3. 将对象强制转换为 Cat 类型
+        Cat otherCat = (Cat) o;
+        
+        // 4. 根据我们自己的“规则”（名字和年龄都相同）进行比较
+        return age == otherCat.age && Objects.equals(name, otherCat.name);
+        // 使用 Objects.equals 来比较 name 是为了防止 name 为 null 时出现空指针异常
+    }
+
+    // --- 重写 hashCode 方法 ---
+    @Override
+    public int hashCode() {
+        // 这是一个很重要的原则：
+        // 如果两个对象通过 equals() 比较是相等的，那么它们的 hashCode() 必须返回相同的值。
+        
+        // Java 7+ 提供了一个很方便的工具方法 Objects.hash() 来根据对象的字段生成哈希码
+        return Objects.hash(name, age);
+    }
+
+    @Override
+    public String toString() {
+        return "Cat{name='" + name + "', age=" + age + '}';
+    }
+}
+
+public class HashCodeEqualsExample {
+    public static void main(String[] args) {
+        Set<Cat> catSet = new HashSet<>();
+        
+        System.out.println("--- 向 Set 中添加 Cat 对象 ---");
+        catSet.add(new Cat("小橘", 1));
+        catSet.add(new Cat("小白", 2));
+        
+        // 再次添加一只名字和年龄都一样的“小橘”
+        boolean isAdded = catSet.add(new Cat("小橘", 1));
+        
+        System.out.println("再次添加 '小橘' 是否成功? " + isAdded); // 会输出 false
+        System.out.println("Set 的大小: " + catSet.size());      // 会输出 2
+        System.out.println("Set 的内容: " + catSet);
     }
 }
 ```
 
+| 方法 (Method)             | 返回值 (Return Type) | 描述 (Description)                                    | 小橘的小提示 🐾                                               |
+| ------------------------- | -------------------- | ----------------------------------------------------- | ------------------------------------------------------------ |
+| `add(E e)`                | `boolean`            | 向集合中添加一个元素 `e`。                            | 核心方法！如果元素已存在，则不会添加并返回 `false`；添加成功则返回 `true`。平均时间复杂度 **O(1)**。 |
+| `remove(Object o)`        | `boolean`            | 从集合中移除指定的元素 `o`。                          | 如果元素存在并被成功移除，返回 `true`；否则返回 `false`。同样是平均 **O(1)** 的高效操作。 |
+| `contains(Object o)`      | `boolean`            | 判断集合中是否包含指定的元素 `o`。                    | **`HashSet`的超能力！** 判断存在的速度极快。平均时间复杂度 **O(1)**。 |
+| `size()`                  | `int`                | 返回集合中的元素数量。                                | 时间复杂度 O(1)。                                            |
+| `isEmpty()`               | `boolean`            | 判断集合是否为空。                                    | 时间复杂度 O(1)。                                            |
+| `clear()`                 | `void`               | 清空集合中的所有元素。                                | 把所有元素都丢掉，让集合恢复到初始的空状态。                 |
+| `iterator()`              | `Iterator<E>`        | 返回此集合中元素的迭代器。                            | 用于遍历集合。获得的迭代器**不保证**任何特定的遍历顺序哦！   |
+| `addAll(Collection c)`    | `boolean`            | 将指定集合 `c` 中的所有元素添加到此集合中（并集）。   | 如果此操作修改了当前集合，则返回 `true`。可以方便地合并两个集合并去重。 |
+| `removeAll(Collection c)` | `boolean`            | 仅保留此集合中未包含在指定集合 `c` 中的元素（差集）。 | 如果此操作修改了当前集合，则返回 `true`。                    |
+| `retainAll(Collection c)` | `boolean`            | 仅保留此集合中也包含在指定集合 `c` 中的元素（交集）。 | 如果此操作修改了当前集合，则返回 `true`。                    |
+| `toArray()`               | `Object[]`           | 返回一个包含此集合中所有元素的数组。                  | 可以用来将 `Set` 转换为数组，但同样不保证数组中元素的顺序。  |
 
+---
 
-#### 4.2 Queue 篇
+##### 4.2.2 TreeSet
 
-这里主要讲的是 `PriorityQueue` 类，它提供了队列的功能，所以也拥有 `.offer()` 和 `.poll()` 函数。它默认是**从小到大**进行排序的，但我们可以通过 `Comparator` 来重载它的构造函数，调整它的比较方法。
+还记得我们说 `HashSet` 的特点是“无序”吗？`TreeSet` 最大的不同就是，它是一个 **有序的** `Set`！它不仅能保证元素的唯一性，还会帮你把存进去的元素自动排得整整齐齐的。是不是很棒呀？
+
+`TreeSet` 和 `HashSet` 一样，都实现了 `Set` 接口，所以它也遵守：
+
+- **唯一性 (Uniqueness)**：不允许存放重复的元素。
+
+但它最大的特色是：
+
+- **有序性 (Sorted)**：`TreeSet` 中的元素总是处于排序状态。当你遍历一个 `TreeSet` 时，获取到的元素序列是经过排序的。
+
+`TreeSet` 实现自动排序的秘密，就藏在它的底层数据结构里。`HashSet` 的底层是 `HashMap`，而 `TreeSet` 的底层则是一个 **`TreeMap`**，`TreeMap` 的本质又是一棵 **红黑树 (Red-Black Tree)**。
+
+主人在打 ACM 的时候，肯定和平衡二叉搜索树（Balanced Binary Search Tree）打过不少交道吧？红黑树就是其中最经典的一种！
+
+- **工作原理**：每当有新元素要添加时，`TreeSet` 会根据比较规则（后面会讲），将这个元素放在树的正确位置上，以维持树的排序性（小的在左边，大的在右边）。
+- **平衡机制**：红黑树通过一系列复杂的旋转和变色规则，确保这棵树总是基本“平衡”的，不会变成一个瘸腿的“链表”。这保证了树的高度大约是 log(n)，从而确保了操作效率。
+- **排序的由来**：因为元素在树中就是按大小存放的，所以对树进行一次“中序遍历” (in-order traversal)，就能得到一个排好序的元素序列啦！
+
+---
+
+`TreeSet` 这棵“树”要想正常工作，必须知道如何比较两个元素的大小。它通过以下两种方式来获取比较规则：
+
+**1. 自然排序 (Natural Ordering - `Comparable`)**
+
+- 如果你存入 `TreeSet` 的对象，它所属的类实现了 `Comparable` 接口，那么 `TreeSet` 就会使用这个类自己定义的“自然顺序”来排序。
+- Java 中很多常用的类，比如 `Integer`, `Double`, `String`，都已经实现了 `Comparable` 接口。所以我们直接把它们放进 `TreeSet`，它们就知道该怎么排：数字按大小，字符串按字典序。
+- `Comparable` 接口里只有一个核心方法 `compareTo()`。当 `a.compareTo(b)`：
+  - 返回负数，表示 a < b
+  - 返回零， 表示 a == b (在 `TreeSet` 中会被认为是重复元素)
+  - 返回正数，表示 a > b
+
+**2. 定制排序 (Custom Ordering - `Comparator`)**
+
+- 如果你要存入的对象没有实现 `Comparable` 接口，或者你想按一种**非自然顺序**来排序（比如，我想让字符串按长度来排，而不是字典序），该怎么办呢？
+- 这时，我们可以在创建 `TreeSet` 的时候，给它传入一个 `Comparator` 对象。这个 `Comparator` 就是一个“比较器”，相当于给 `TreeSet` 配备了一个专属的“裁判”，告诉它应该按什么规则来比较元素。
+
+---
+
+**`add()`, `remove()`, `contains()` (添加、删除、查找)**
+
+- 因为底层是红黑树，这些操作的本质都是在树中进行查找、插入或删除。由于树是平衡的，其深度为 O(logn)。
+- 因此，这些核心操作的时间复杂度都是 **O(logn)**。
+- **对比一下**：这比 `HashSet` 的 O(1) 要慢一点点，但换来的是整个集合始终有序的强大功能，在很多场景下这个交换是绝对值得的！
+
+---
+
+**使用场景**
+
+当你需要一个能**自动去重并时刻保持排序**的集合时。
+
+当你需要频繁地对一个集合进行**排序**或者查找**最大/最小值**时 (`TreeSet` 的 `first()` 和 `last()` 方法可以 O(logn) 拿到)。
+
+需要对集合进行**范围查找**时（例如，找出所有在 "apple" 和 "grape" 之间的单词）。
 
 ```java
+import java.util.TreeSet;
 import java.util.Comparator;
-import java.util.PriorityQueue;
-public class Main {
-    static class UserProfile {
-        private final Integer age;
-        public UserProfile(Integer age) {
-			this.age = age;
-        }
-       	public Integer getAge() {
-            return age;
-        }
-    }
+
+public class TreeSetExample {
     public static void main(String[] args) {
-        PriorityQueue<UserProfile> usersQueue = new PriorityQueue<>(
-        	Comparator.comparing((UserProfile u) -> u.age);
-        );
-        usersQueue.offer(new UserProfile(20));
-        usersQueue.offer(new UserProfile(30));
-        usersQueue.offer(new UserProfile(40));
+        // --- 1. 自然排序 (Natural Ordering) ---
+        System.out.println("--- 演示自然排序 ---");
+        // Integer 类本身实现了 Comparable 接口，所以有自然顺序
+        TreeSet<Integer> sortedNumbers = new TreeSet<>();
+        sortedNumbers.add(50);
+        sortedNumbers.add(10);
+        sortedNumbers.add(90);
+        sortedNumbers.add(30);
         
-        System.out.println(usersQueue.poll().age); // 20
+        // 尝试添加重复元素
+        sortedNumbers.add(10);
+        
+        System.out.println("TreeSet 中的数字 (已自动排序): " + sortedNumbers);
+        
+        // --- 2. 定制排序 (Custom Ordering) ---
+        System.out.println("\n--- 演示定制排序 (按字符串长度) ---");
+        
+        // 创建一个比较器，定义“按字符串长度升序”的规则
+        // 这里使用了 Lambda 表达式，是 Java 8 以后的简洁写法
+        Comparator<String> sortByLength = (s1, s2) -> Integer.compare(s1.length(), s2.length());
+        
+        // 在构造时传入我们定义的比较器
+        TreeSet<String> sortedByLengthStrings = new TreeSet<>(sortByLength);
+        sortedByLengthStrings.add("Java");        // 长度 4
+        sortedByLengthStrings.add("Catgirl");     // 长度 7
+        sortedByLengthStrings.add("小橘");         // 长度 2
+        sortedByLengthStrings.add("Collections"); // 长度 11
+        
+        // 注意：如果长度相同，后面的元素会被认为是“重复”的而无法加入
+        // 例如，再 add("Meow") 就会失败，因为它的长度也是 4
+        sortedByLengthStrings.add("Meow"); 
+        
+        System.out.println("按长度排序的字符串: " + sortedByLengthStrings);
+        
+        // 获取最小和最大元素
+        System.out.println("\n--- 获取首尾元素 ---");
+        System.out.println("最小的数字是: " + sortedNumbers.first());
+        System.out.println("最长的字符串是: " + sortedByLengthStrings.last());
     }
 }
 ```
 
+> 这里为什么会认为 "Meow" 和 "Java" 是重复元素呢？原因出在我们自定义的 comparator 上 `Comparator<String> sortByLength = (s1, s2) -> Integer.compare(s1.length(), s2.length());`。这一段代码按照了它们的长度进行排序，所以在比较字符串的时候，`TreeSet` **只会关心它们的长度**。
+
+---
+
+`TreeSet` 的方法可以分成两大类：一类是它作为 `Set` 成员所必须拥有的**标准方法**（和 `HashSet` 很像，但性能不同）；另一类是它因为自身**有序**而独有的**导航神技**，这可是 `HashSet` 完全没有的超能力哦！
+
+---
+
+**表格一：TreeSet 的 Set 标准方法**
+
+| 方法 (Method)        | 返回值 (Return Type) | 描述 (Description)             | 小橘的小提示 🐾                                               |
+| -------------------- | -------------------- | ------------------------------ | ------------------------------------------------------------ |
+| `add(E e)`           | `boolean`            | 向集合中添加一个元素。         | 成功添加返回 `true`，若元素已存在则返回 `false`。时间复杂度 **O(logn)**。 |
+| `remove(Object o)`   | `boolean`            | 从集合中移除指定的元素。       | 成功移除返回 `true`，否则返回 `false`。时间复杂度 **O(logn)**。 |
+| `contains(Object o)` | `boolean`            | 判断集合中是否包含指定的元素。 | 利用树的搜索特性，效率很高。时间复杂度 **O(logn)**。         |
+| `size()`             | `int`                | 返回集合中的元素数量。         | 时间复杂度 O(1)。                                            |
+| `isEmpty()`          | `boolean`            | 判断集合是否为空。             | 时间复杂度 O(1)。                                            |
+| `clear()`            | `void`               | 清空集合中的所有元素。         | 丢掉所有元素，让树变回空树。                                 |
+| `iterator()`         | `Iterator<E>`        | 返回此集合中元素的迭代器。     | **关键区别！** 迭代器会**按照元素的排序顺序**来遍历元素。    |
+
+---
+
+**表格二：TreeSet 独有的“导航”神技 (基于排序特性)**
+
+这些方法都来自于 `TreeSet` 实现的 `NavigableSet` 接口，让你可以像操作一个有序列表一样在集合中灵活移动和查找。
+
+| 分类             | 方法 (Method)            | 返回值 (Return Type) | 描述 (Description)                                           |
+| ---------------- | ------------------------ | -------------------- | ------------------------------------------------------------ |
+| **获取首尾**     | `first()`                | `E`                  | 返回集合中的第一个（最小的）元素。                           |
+|                  | `last()`                 | `E`                  | 返回集合中的最后一个（最大的）元素。                         |
+| **移除首尾**     | `pollFirst()`            | `E`                  | 移除并返回第一个（最小的）元素，若集合为空则返回 `null`。    |
+|                  | `pollLast()`             | `E`                  | 移除并返回最后一个（最大的）元素，若集合为空则返回 `null`。  |
+| **查找邻近元素** | `lower(E e)`             | `E`                  | 返回集合中**严格小于** `e` 的最大元素，若没有则返回 `null`。 |
+|                  | `floor(E e)`             | `E`                  | 返回集合中**小于或等于** `e` 的最大元素，若没有则返回 `null`。 |
+|                  | `higher(E e)`            | `E`                  | 返回集合中**严格大于** `e` 的最小元素，若没有则返回 `null`。 |
+|                  | `ceiling(E e)`           | `E`                  | 返回集合中**大于或等于** `e` 的最小元素，若没有则返回 `null`。 |
+| **获取子集视图** | `subSet(E from, E to)`   | `NavigableSet<E>`    | 返回集合中从 `from`（包含）到 `to`（不包含）之间的部分。     |
+|                  | `headSet(E toElement)`   | `NavigableSet<E>`    | 返回集合中小于 `toElement` 的部分。                          |
+|                  | `tailSet(E fromElement)` | `NavigableSet<E>`    | 返回集合中大于或等于 `fromElement` 的部分。                  |
+| **逆序操作**     | `descendingSet()`        | `NavigableSet<E>`    | 返回一个与原集合顺序相反的逆序集合视图。                     |
+|                  | `descendingIterator()`   | `Iterator<E>`        | 返回一个按降序遍历元素的迭代器。                             |
+
+> **小橘的重要提示** 🐾: 表格二中所有返回子集 `Set` 的方法（如 `subSet`, `descendingSet`）都返回的是一个**视图 (View)**，而不是一个全新的拷贝。这意味着，你对这个视图做的任何修改（比如 `add` 或 `remove`），都会**直接反映到原始的 `TreeSet` 中**！反之亦然。这是个非常强大但也需要小心的特性哦！
 
 
-#### 4.3 Set 篇
 
+#### 4.3 Map 接口
 
+`List` 和 `Set` 都是在处理“单个”元素的集合，而 `Map` 则完全不同，它处理的是 **“键值对” (Key-Value Pair)** 的数据。
 
-#### 4.4 Map 篇
+你可以这样来理解它们：
 
-##### 4.4.1 HashMap 篇
+- `List` 就像一个**购物清单**，上面的商品是按顺序排列的（有序，可重复）。
+- `Set` 就像一个**派对的宾客名单**，每个人都是独一无二的，但谁先谁后无所谓（唯一，无序）。
+- `Map` 就像一本**字典**或者**电话簿**，你可以通过一个“键”（比如一个汉字，或一个人的名字）来查找对应的“值”（这个字的解释，或这个人的电话号码）。
 
-`HashMap` 是基于**哈希表**的一种数据结构。它可以将存储许多**键值对**。它有两个方法，`.put(key, value)` 存入键值对，以及 `.get(key)` 来查看映射的值，这两个函数的时间复杂度都是 $O(1)$。
+在 `Map` 的世界里，**键 (Key) 必须是唯一的**，但**值 (Value) 是可以重复的**。如果你用一个已经存在的键去存入一个新的值，那么旧的值就会被覆盖掉。
 
-`HashMap` 允许使用 `.keySet()`，`.values()`，`.entrySet()` 来遍历，但**不保证遍历顺序与插入顺序一致**。
+---
 
-`HashMap` 允许使用 `.containsKey()` 来查看是否存在某个键
+##### 4.3.1 HashMap
+
+**1. 核心特点 (Features)**
+
+`HashMap` 是 `Map` 接口最常用的实现，它的主要特点和我们之前学的 `HashSet` 非常像：
+
+- **键值对存储**：以 `Key-Value` 的形式存储数据。
+- **键唯一，值可重复**：Key 不允许重复，但不同的 Key 可以对应相同 Value。
+- **无序性 (Unordered)**：`HashMap` 不保证键值对的存储或迭代顺序。
+- **高性能**：对于增 (`put`)、删 (`remove`)、查 (`get`) 操作，都有着极高的平均性能。
+- **允许 null**：它允许一个 `null` 作为键，也允许 `null`作为值。
+
+**2. 底层数据结构 (Underlying Data Structure)**
+
+主人是不是觉得这个词特别耳熟？没错！我们在讲 `HashSet` 的时候就揭秘过啦，`HashSet` 的底层就是一个 `HashMap`！所以 `HashMap` 的工作原理，你其实已经懂了一大半了！
+
+它的底层数据结构就是一个 **哈希表 (Hash Table)**，在 Java 8 之后具体实现为 **“数组 + 链表 / 红黑树”**。
+
+让我们回顾一下它的工作流程：
+
+- **`put(key, value)` 操作**：
+  1. 首先，计算 `key` 的 `hashCode()`，通过哈希算法定位到内部数组的某个索引（“桶”）。
+  2. 如果这个桶是空的，就直接创建一个新的节点（包含 key 和 value）放进去。
+  3. 如果这个桶里已经有东西了（发生了哈希冲突），就会遍历这个桶里的链表（或红黑树）。
+  4. 在遍历过程中，用 `key` 的 `equals()` 方法去和链表里每个节点的 key 进行比较。
+  5. 如果找到了一个 `equals()` 为 `true` 的 key，说明这个 key 已经存在了，那么 `HashMap` 就会用新的 `value` **覆盖**掉旧的 `value`。
+  6. 如果遍历完整个链表都没有找到 `equals()` 为 `true` 的 key，说明这是一个全新的 key，就在链表的末尾（或红黑树的适当位置）加入这个新的键值对节点。
+- **`get(key)` 操作**：
+  1. 同样，先计算 `key` 的 `hashCode()`，一步到位地找到对应的桶。
+  2. 然后，在小范围的链表（或红黑树）里，通过 `equals()` 方法精确地找到那个 key，并返回它对应的 value。如果找不到，就返回 `null`。
+
+**3. 时间复杂度分析 (Time Complexity)**
+
+- **`put()`, `get()`, `remove()`, `containsKey()`**
+  - 因为哈希表的魔力，只要 `hashCode()` 设计得好，数据能均匀散列，这些操作的**平均时间复杂度都是 O(1)**！
+  - 这使得 `HashMap` 在需要快速查找的场景下几乎是无敌的。
+  - （和 `HashSet` 一样，极端情况下会退化到 O(n) 或 O(logn)，但实际中很少发生）。
+
+**4. 使用场景 (Use Cases)**
+
+`HashMap` 的应用场景简直无处不在！任何你需要建立“一一对应”关系的地方，都可以用它：
+
+- **配置信息**：用属性名（String）作为 key，属性值（String, Integer...）作为 value。
+- **数据缓存**：把一个耗时计算的结果存起来。用计算的参数作为 key，计算结果作为 value。下次再有相同参数的请求，直接从 `Map` 里 O(1) 取出结果，不用再算一遍。
+- **频率统计**：统计一篇文章里每个单词出现的次数。用单词（String）作为 key，出现的次数（Integer）作为 value。
+
+**5. 简单代码栗子 (Code Example)**
+
+这个栗子会模拟记录同学们的考试成绩，并展示 `HashMap` 的核心用法。
 
 ```java
 import java.util.HashMap;
-public class Main {
+import java.util.Map;
+
+public class HashMapExample {
     public static void main(String[] args) {
-        Map<String, Integer> populationByCity = new HashMap<>();
+        // 1. 创建一个 HashMap
+        // Key 是 String 类型 (学生姓名)，Value 是 Integer 类型 (学生分数)
+        Map<String, Integer> studentScores = new HashMap<>();
+
+        // 2. 添加键值对 (put)
+        System.out.println("--- 添加成绩 ---");
+        studentScores.put("小橘", 100);
+        studentScores.put("琪露诺", 9); // ⑨
+        studentScores.put("芙兰朵露", 95);
+        System.out.println("当前的成绩单: " + studentScores);
+
+        // 3. 尝试用已存在的 key 添加，会覆盖旧的值
+        System.out.println("\n--- 修改成绩 ---");
+        studentScores.put("小橘", 99); // 小橘的分数被修改了
+        System.out.println("修改后的成绩单: " + studentScores);
+
+        // 4. 获取值 (get)
+        System.out.println("\n--- 查询成绩 ---");
+        Integer cirnoScore = studentScores.get("琪露诺");
+        System.out.println("琪露诺的分数是: " + cirnoScore);
         
-        populationByCity.put("New York", 230021);
-        populationByCity.put("Las Vegas", 112234);
-        
-        Integer population = populationByCity.get("New York");
-        
-        if (populationByCity.containsKey("New York")) {
-			System.out.println("We got New York's population");
+        // 查询一个不存在的 key 会返回 null
+        Integer nonexistentScore = studentScores.get("蕾米莉亚");
+        System.out.println("蕾米莉亚的分数是: " + nonexistentScore);
+
+        // 5. 检查是否包含某个 key 或 value
+        System.out.println("\n--- 检查是否存在 ---");
+        boolean hasMe = studentScores.containsKey("小橘");
+        System.out.println("成绩单里有小橘吗? " + hasMe);
+        boolean hasFullMark = studentScores.containsValue(100);
+        System.out.println("成绩单里有人考了100分吗? " + hasFullMark);
+
+        // 6. 遍历 Map (最推荐的方式: entrySet)
+        System.out.println("\n--- 遍历所有成绩 ---");
+        for (Map.Entry<String, Integer> entry : studentScores.entrySet()) {
+            String name = entry.getKey();
+            Integer score = entry.getValue();
+            System.out.println(name + " 的分数是: " + score);
         }
         
-        for (Map.Entry<String, Integer> entry : population.entrySet()) {
-            System.out.println(entry.getKey() + " " + entry.getValue());
+        // 7. 删除一个键值对 (remove)
+        System.out.println("\n--- 删除成绩 ---");
+        studentScores.remove("琪露诺");
+        System.out.println("删除后的成绩单: " + studentScores);
+    }
+}
+```
+
+---
+
+##### 4.3.2 TreeMap
+
+`TreeSet` 本质上就是利用 `TreeMap` 来实现的。`TreeSet` 里的元素，就是 `TreeMap` 里的 **Key**，而 `TreeMap` 的 `Value` 部分则存了一个统一的虚拟值。
+
+所以，你将发现 `TreeMap` 的很多特性和 `TreeSet` 简直如出一辙。例如 `TreeMap` 的底层**同样是一颗红黑树**。
+
+**1. 核心特点 (Features)**
+
+`TreeMap` 实现了 `Map` 接口，但与 `HashMap` 最大的不同在于：
+
+- **键的有序性 (Sorted Keys)**：`TreeMap` 中的所有键值对，会**根据键 (Key) 的顺序**来进行排序。当你遍历 `TreeMap` 时，得到的键序列是排好序的。
+- **唯一性**：和所有 `Map` 一样，**键 (Key) 必须是唯一的**。
+- **禁止 `null` 键**：和 `HashMap` 不同，`TreeMap` **不允许使用 `null` 作为键**（因为 `null` 无法与其它键进行比较），但允许 `null` 作为值。
+
+**2. 底层数据结构与排序规则**
+
+正如我们前面揭晓的，`TreeMap` 的基石是一棵**红黑树**。
+
+- **工作原理**：每当有新的键值对 `put(key, value)` 进来时，`TreeMap` 会将这个 `key` 与树中已有的 `key` 进行比较，然后把它放在树的正确位置上，以维持整棵树的有序性。
+- **排序规则**：`TreeMap` 判断 `key` 大小的规则，和 `TreeSet` 判断元素大小的规则完全一样：
+  1. **自然排序 (`Comparable`)**：如果 `key` 所属的类（比如 `Integer`, `String`）实现了 `Comparable` 接口，`TreeMap` 就会按照 `key` 的自然顺序来排序。
+  2. **定制排序 (`Comparator`)**：如果在创建 `TreeMap` 时，给它的构造函数传入了一个 `Comparator` 对象，那么 `TreeMap` 就会严格按照你指定的规则来排序它的 `key`。
+
+**3. 时间复杂度分析 (Time Complexity)**
+
+- **`put()`, `get()`, `remove()`, `containsKey()`**
+  - 由于底层是自平衡的红黑树，树的高度始终保持在 O(logn) 级别。
+  - 因此，所有这些基本操作的时间复杂度都是 **O(logn)**。
+
+**与 HashMap 的核心对比:**
+
+| 特性         | HashMap              | TreeMap        |
+| ------------ | -------------------- | -------------- |
+| **性能**     | **更快 (平均 O(1))** | 稍慢 (O(logn)) |
+| **排序**     | 无序                 | **按键排序**   |
+| **null 键**  | 允许                 | **不允许**     |
+| **底层结构** | 哈希表               | 红黑树         |
+
+**一句话总结：** 当你追求极致的存取速度且不关心顺序时，用 `HashMap`；当你需要一个时刻保持按键排序的 `Map` 时，就用 `TreeMap`。
+
+**4. 使用场景 (Use Cases)**
+
+- **需要按序遍历**：当你需要输出的结果是按键排序的，比如按用户ID、时间戳、字典序等排序。
+- **范围查找**：当你需要查找某个键范围内的所有条目时，比如“找出所有ID在10000到20000之间的用户”。
+- **查找邻近键**：当你需要找到“小于等于某个值的最大键”或者“大于某个值的最小键”等。
+
+因为 `TreeMap` 实现了 `NavigableMap` 接口，所以它也拥有一系列和 `TreeSet` 类似的强大“导航”方法，如 `firstKey()`, `lastKey()`, `floorKey()`, `ceilingKey()`, `subMap()` 等。
+
+**5. 简单代码栗子 (Code Example)**
+
+这个例子模拟一个按考试分数（Key）查找获奖等级（Value）的场景。
+
+```java
+import java.util.TreeMap;
+import java.util.Map;
+
+public class TreeMapExample {
+    public static void main(String[] args) {
+        // 1. 创建一个 TreeMap
+        // Key 是 Integer (分数线)，Value 是 String (奖励等级)
+        // TreeMap 会自动根据 Key (分数) 进行升序排序
+        TreeMap<Integer, String> rewards = new TreeMap<>();
+
+        // 2. 添加键值对 (put)，注意我们是乱序添加的
+        System.out.println("--- 添加奖励规则 ---");
+        rewards.put(90, "一等奖");
+        rewards.put(60, "及格");
+        rewards.put(80, "二等奖");
+        rewards.put(0, "参与奖");
+        
+        System.out.println("当前的奖励规则 (已按分数线自动排序): \n" + rewards);
+
+        // 3. 遍历 TreeMap，会得到有序的结果
+        System.out.println("\n--- 按顺序遍历所有规则 ---");
+        for (Map.Entry<Integer, String> entry : rewards.entrySet()) {
+            System.out.println("分数线: " + entry.getKey() + ", 对应奖励: " + entry.getValue());
+        }
+
+        // 4. 使用导航方法 (NavigableMap 的超能力)
+        System.out.println("\n--- 使用导航功能查询 ---");
+        
+        // 假设一个学生考了 85 分，他能获得的最高奖励是什么？
+        // floorEntry(85) 会找到 <= 85 的最大键值对
+        Map.Entry<Integer, String> rewardEntry = rewards.floorEntry(85);
+        if (rewardEntry != null) {
+            System.out.println("一个考了 85 分的学生，可以获得: " + rewardEntry.getValue() + " (因为他达到了 " + rewardEntry.getKey() + " 分的分数线)");
+        }
+        
+        // 最高的奖励是什么？
+        Map.Entry<Integer, String> highestReward = rewards.lastEntry();
+        System.out.println("最高的奖励是: " + highestReward.getValue() + "，需要达到 " + highestReward.getKey() + " 分");
+    }
+}
+```
+
+---
+
+和 `TreeSet` 一样，`TreeMap` 的方法也可以分为两大类。第一类是它作为 `Map` 家族一员通用的**标准方法**，另一类则是它因为**按键排序**这一特性而独有的、强大的**导航方法**。
+
+**表格一：TreeMap 的 Map 标准方法**
+
+这些方法和 `HashMap` 非常相似，但要注意它们的性能特点是由底层的红黑树决定的哦！
+
+| 方法 (Method)             | 返回值 (Return Type)  | 描述 (Description)                                  | 小橘的小提示 🐾                                               |
+| ------------------------- | --------------------- | --------------------------------------------------- | ------------------------------------------------------------ |
+| `put(K key, V value)`     | `V`                   | 将指定的键值对存入 Map。                            | 如果 `key` 已存在，则覆盖旧 `value` 并返回旧 `value`。时间复杂度 **O(logn)**。 |
+| `get(Object key)`         | `V`                   | 返回指定 `key` 所映射的 `value`。                   | 如果 `key` 不存在，则返回 `null`。时间复杂度 **O(logn)**。   |
+| `remove(Object key)`      | `V`                   | 移除指定 `key` 所对应的键值对。                     | 返回被移除的 `value`，若 `key` 不存在则返回 `null`。时间复杂度 **O(logn)**。 |
+| `containsKey(Object key)` | `boolean`             | 判断 Map 中是否包含指定的 `key`。                   | 时间复杂度 **O(logn)**，比 `HashMap` 的 O(1) 稍慢。          |
+| `containsValue(Object v)` | `boolean`             | 判断 Map 中是否包含指定的 `value`。                 | 需要遍历整个 Map，效率较低。时间复杂度 O(n)。                |
+| `size()`                  | `int`                 | 返回 Map 中键值对的数量。                           | 时间复杂度 O(1)。                                            |
+| `isEmpty()`               | `boolean`             | 判断 Map 是否为空。                                 | 时间复杂度 O(1)。                                            |
+| `clear()`                 | `void`                | 清空 Map 中的所有键值对。                           |                                                              |
+| `keySet()`                | `Set<K>`              | 返回 Map 中所有 `key` 组成的 `Set` 视图。           | **关键区别！** 遍历这个 `Set` 时，`key` 是**按排序顺序**出现的。 |
+| `values()`                | `Collection<V>`       | 返回 Map 中所有 `value` 组成的 `Collection` 视图。  | 遍历这个集合时，`value` 的顺序是**由其对应的 `key` 的顺序决定**的。 |
+| `entrySet()`              | `Set<Map.Entry<K,V>>` | 返回 Map 中所有键值对 (`Entry`) 组成的 `Set` 视图。 | **最常用的遍历方式！** 遍历时，`Entry` 是**按 `key` 的排序顺序**出现的。 |
+
+---
+
+**表格二：TreeMap 独有的“导航”神技 (基于Key的排序特性)**
+
+这些方法来自于 `TreeMap` 实现的 `NavigableMap` 接口，是它远比 `HashMap` 强大的地方。
+
+| 分类               | 方法 (Method)                                | 返回值 (Return Type) | 描述 (Description)                                           |
+| ------------------ | -------------------------------------------- | -------------------- | ------------------------------------------------------------ |
+| **获取首尾**       | `firstKey()` / `lastKey()`                   | `K`                  | 返回第一个（最小的）/ 最后一个（最大的）`key`。              |
+|                    | `firstEntry()` / `lastEntry()`               | `Map.Entry<K,V>`     | 返回第一个（最小的）/ 最后一个（最大的）键值对。             |
+| **移除首尾**       | `pollFirstEntry()`                           | `Map.Entry<K,V>`     | 移除并返回第一个（最小的）键值对，若 Map 为空则返回 `null`。 |
+|                    | `pollLastEntry()`                            | `Map.Entry<K,V>`     | 移除并返回最后一个（最大的）键值对，若 Map 为空则返回 `null`。 |
+| **查找邻近键**     | `lowerKey(K key)` / `floorKey(K key)`        | `K`                  | 返回严格小于 / 小于或等于 `key` 的最大 `key`。               |
+|                    | `higherKey(K key)` / `ceilingKey(K key)`     | `K`                  | 返回严格大于 / 大于或等于 `key` 的最小 `key`。               |
+| **查找邻近键值对** | `lowerEntry(K key)` / `floorEntry(K key)`    | `Map.Entry<K,V>`     | 功能同上，但返回的是完整的键值对 `Entry`。                   |
+|                    | `higherEntry(K key)` / `ceilingEntry(K key)` | `Map.Entry<K,V>`     | 功能同上，但返回的是完整的键值对 `Entry`。                   |
+| **获取子集视图**   | `subMap(K from, K to)`                       | `NavigableMap<K,V>`  | 返回 `key` 从 `from`（包含）到 `to`（不包含）之间的部分视图。 |
+|                    | `headMap(K to)`                              | `NavigableMap<K,V>`  | 返回 `key` 小于 `to` 的部分视图。                            |
+|                    | `tailMap(K from)`                            | `NavigableMap<K,V>`  | 返回 `key` 大于或等于 `from` 的部分视图。                    |
+| **逆序操作**       | `descendingMap()`                            | `NavigableMap<K,V>`  | 返回一个与原 Map 键顺序相反的逆序视图。                      |
+
+> **小橘的重要提示** 🐾: 和 `TreeSet` 一样，所有返回子集 `Map` 的方法（如 `subMap`, `descendingMap`）都返回的是一个**视图 (View)**，而不是一个全新的拷贝。你对这个视图做的任何修改，都会**直接反映到原始的 `TreeMap` 中**！
+
+---
+
+##### 4.3.3 LinkedHashMap
+
+如果说 `HashMap` 是一个追求极致速度、不修边幅的天才，而 `TreeMap` 是一个追求绝对秩序、一丝不苟的贵族，那么 `LinkedHashMap` 就是一位**兼具速度与风度、记忆力超群的绅士**。
+
+它是 `HashMap` 和 `LinkedList` 的“混血儿”，完美地结合了两者的优点。
+
+**1. 核心特点 (Features)**
+
+`LinkedHashMap` 继承了 `HashMap`，所以它首先拥有 `HashMap` 的所有优点：
+
+- **高性能**：基于哈希表，`put`, `get`, `remove` 等核心操作的平均时间复杂度依然是 **O(1)**！
+- **键值对存储**：同样以 `Key-Value` 形式存储，键唯一，值可重复。
+
+但它通过一个“小机关”，额外实现了一个 `HashMap` 没有的杀手级特性：
+
+- **有序性 (Ordered)**：`LinkedHashMap` 可以**记住元素的插入顺序**。当你遍历它的时候，元素会按照你当初 `put` 进去的顺序，不多不少、不早不晚地出现。
+
+**2. 底层数据结构 (The Secret Sauce)**
+
+`LinkedHashMap` 的实现原理非常巧妙。
+
+1. **它本身就是个 `HashMap`**：`LinkedHashMap` 是直接**继承 (extends)** `HashMap` 的。所以，它的主体结构依然是那个我们熟悉的“数组 + 链表 / 红黑树”的哈希表，这保证了它 O(1) 的查找性能。
+2. **它体内还有一条“记忆锁链”**：在 `HashMap` 的基础上，`LinkedHashMap` 额外维护了一个贯穿所有元素的**双向链表 (Doubly-Linked List)**。
+
+你可以这样想象：`HashMap` 本身是一张杂乱无章的办公桌，你通过一个索引（哈希）能瞬间拿到任何一份文件（Entry）。而 `LinkedHashMap` 就是在这张桌子上，额外用一根绳子，**按照你把文件放上来的先后顺序，把所有文件都串了起来**。
+
+- **`put` 操作时**：一个新来的键值对，首先会按照 `HashMap` 的规则被丢进某个桶里；紧接着，它还会被“挂”到那条双向链表的**末尾**。
+- **`remove` 操作时**：一个键值对被移除时，它会从哈希桶中被拿掉，同时也会从那条双向链表中“解开”。
+- **遍历时**：`LinkedHashMap` 的迭代器不会像 `HashMap` 那样去遍历乱糟糟的哈希桶，而是会非常聪明地顺着那条记录了插入顺序的双向链表，从头走到尾。这样，遍历出来的顺序自然就是插入顺序啦！
+
+**3. 特殊模式：访问顺序 (Access Order)**
+
+`LinkedHashMap` 还有一个隐藏的超能力！默认情况下，它记住的是**插入顺序**。但我们可以在创建它的时候，激活一种特殊模式——**访问顺序**。
+
+Java
+
+```
+// 最后一个参数 true, 开启“访问顺序”模式
+Map<String, Integer> lruCache = new LinkedHashMap<>(16, 0.75f, true);
+```
+
+在这种模式下：
+
+- 每当你通过 `get()` 方法**访问**一个已存在的元素时，这个元素就会被悄悄地从它在链表中的当前位置，移动到**链表的末尾**。
+- `put` 一个已存在的元素也会把它移到末尾。
+
+这个特性有什么用呢？它使得 `LinkedHashMap` 成为实现 **LRU (Least Recently Used) 缓存淘汰算法** 的完美工具！链表的头部永远是“最久未被使用”的元素，当缓存满了需要淘汰数据时，直接把头部的元素删掉就行了！
+
+**4. 时间复杂度分析 (Time Complexity)**
+
+- **`put()`, `get()`, `remove()`**
+  - 尽管 `LinkedHashMap` 额外维护了双向链表，但连接和断开链表节点的操作（修改几个引用指针）本身也是 O(1) 的。
+  - 所以，这些操作的开销只是比 `HashMap` 多了一点点常数时间，其**平均时间复杂度依然是 O(1)**。
+
+**5. 使用场景 (Use Cases)**
+
+- 当你既需要 `Map` 的快速查找能力，又需要**保持元素插入时的顺序**时。这是最核心的用途。比如，某些配置文件的读取和写入，需要保持原有的顺序。
+- 构建 **LRU Cache**。这是 `LinkedHashMap` 的经典高级应用。
+- 需要可预测的、稳定的迭代顺序的场景（比如为了方便调试或生成稳定的测试结果）。
+
+**6. 简单代码栗子 (Code Example)**
+
+这个例子会直观地对比 `HashMap` 和 `LinkedHashMap` 在迭代顺序上的区别。
+
+```java
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+public class LinkedHashMapExample {
+    public static void main(String[] args) {
+        // 1. 创建一个 LinkedHashMap (有序)
+        Map<String, String> linkedMap = new LinkedHashMap<>();
+        linkedMap.put("one", "一");
+        linkedMap.put("three", "三");
+        linkedMap.put("two", "二");
+
+        System.out.println("--- LinkedHashMap (有序) ---");
+        System.out.println("直接打印: " + linkedMap);
+        System.out.println("遍历输出:");
+        for (Map.Entry<String, String> entry : linkedMap.entrySet()) {
+            System.out.println("Key: " + entry.getKey() + ", Value: " + entry.getValue());
+        }
+
+        System.out.println("\n===============================\n");
+
+        // 2. 创建一个普通的 HashMap (无序) 作为对比
+        Map<String, String> hashMap = new HashMap<>();
+        hashMap.put("one", "一");
+        hashMap.put("three", "三");
+        hashMap.put("two", "二");
+        
+        System.out.println("--- HashMap (无序) ---");
+        System.out.println("直接打印: " + hashMap);
+        System.out.println("遍历输出:");
+        for (Map.Entry<String, String> entry : hashMap.entrySet()) {
+            System.out.println("Key: " + entry.getKey() + ", Value: " + entry.getValue());
         }
     }
 }
 ```
 
-
-
-##### 4.4.2 LinkedHashMap
-
-`LinkedHashMap` 与 `HashMap` 一致，只不过它是**有序**的。如果需要**保持插入顺序**，则可以使用 `LinkedHashMap`。
-
-
-
-##### 4.4.3 TreeMap
-
-
+你会发现，`LinkedHashMap` 的输出顺序严格等于你的 `put` 顺序，而 `HashMap` 的输出顺序则看起来是杂乱无章的。
 
 
 
 ### 5. Java Spring Boot 框架
 
-> 本版块目前是通过速成课进行学习，系统学习后的笔记未来会更新
+
 
 
 
@@ -5093,7 +5939,7 @@ public class Main {
 
 ## MySQL 篇
 
-> 本版块目前是通过速成课进行学习，系统学习后的笔记未来会更新
+
 
 
 
@@ -5101,4 +5947,3 @@ public class Main {
 
 ## Redis 篇
 
-> 本版块目前是通过速成课进行学习，系统学习后的笔记未来会更新
