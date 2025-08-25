@@ -2,7 +2,9 @@
 
 # 🧊's 后端学习笔记
 
-## Java 篇
+## Java SE 篇
+
+Java SE，是 Java Standard Edition (Java 标准版) 的缩写，是 Java 的核心和基础，本篇讲的是 Java 的基础部分，不会涉及到框架部分。
 
 ### 1. Java 基础篇
 
@@ -4713,7 +4715,7 @@ public class Main {
 
 #### 3.1 创建多线程
 
-Java 中有两种方法创建多线程：继承 `Thread` 类或者实现 `Runnable` 接口。
+Java 中有三种方法创建多线程：继承 `Thread` 类，实现 `Runnable` 接口或者实现 `Callable` 接口。
 
 以下的例子，我们在主线程中写一个死循环，输出 "Hello"，而新线程写一个死循环，输出 "World"，来模拟线程被占用的情况。
 
@@ -4733,6 +4735,8 @@ public class Hello {
 ```
 
 这样子，实际上代码会一直在 `System.out.println("Hello");` 中循环，即一直输出 "Hello"。因为这个循环没有结束，所以它不会进入到下一个语句中，我们就可以以此来模拟线程被占用的情况。
+
+---
 
 * 继承 `Thread` 类的方法：
 
@@ -4795,6 +4799,8 @@ public class Hello {
     }
 }
 ```
+
+---
 
 * 实现 `Runnable` 接口的方法：
 
@@ -4861,6 +4867,136 @@ public class Hello {
    * 一般看到 `implements Runnable` 就知道这个类是一个“任务”，而 `extends Thread` 则表示这个类是一个“线程”，在语义上，前者通常更能准确地描述意图。
 
 所以在实际开发中，**优先推荐使用实现** `Runnable` **接口的方法来创建多线程**。
+
+---
+
+**通过实现 Callable 接口创建线程**
+
+`Runnable` **的“小缺点”**
+
+在认识 `Callable` 之前，我们先看看 `Runnable` 接口长什么样：
+
+```java
+public interface Runnable {
+    void run();
+}
+```
+
+它的核心方法 `run()` 有两个特点：
+
+1. **返回值是 `void`**：它不能返回任何计算结果。线程任务执行完了就完了，主线程想知道它算出了什么，就得通过一些共享变量等复杂的手段，非常不方便。
+2. **不能抛出受检异常 (Checked Exception)**：`run()` 方法签名上没有 `throws` 关键字。这意味着如果你的任务中发生了比如 `IOException` 这样的异常，你必须在 `run()` 方法内部用 `try-catch` 捕获并处理，无法把它抛给调用者来处理。
+
+**小橘的比喻 🐾**：`Runnable` 就像一个**只干活、不汇报的普通工人**。你派他去做个任务，他做完就拍拍屁股走人了，既不会带回成果（返回值），也不会告诉你过程中遇到了什么麻烦（抛出异常）。
+
+---
+
+`Callable` **—— 更强大的“专业顾问”**
+
+为了解决 `Runnable` 的痛点，`Callable` 接口应运而生。让我们看看它的定义：
+
+```java
+public interface Callable<V> {
+    V call() throws Exception;
+}
+```
+
+看到区别了吗？它就像是 `Runnable` 的豪华升级版：
+
+1. **`V call()`**：
+   - 它的方法名叫 `call()`。
+   - 它有一个**泛型返回值 `V`** (V for Value)。这意味着你的异步任务在执行完毕后，可以返回一个具体的结果！比如 `Callable<Integer>` 就能返回一个整数，`Callable<String>` 就能返回一个字符串。
+2. **`throws Exception`**：
+   - `call()` 方法可以向外抛出异常。这意味着在任务执行过程中如果发生任何问题，可以直接抛出去，让启动这个任务的“老板”（主线程）来决定如何处理。
+
+**小橘的比喻 🐾**：`Callable` 就像一个**能带回详细报告的专业顾问**。你派他去做一个复杂的分析任务，任务结束后，他会带回一份详细的分析报告（返回值），并且如果中途遇到了困难，他也会在报告中明确指出（抛出异常）。
+
+---
+
+**如何使用 `Callable` 并获取结果？**
+
+既然 `Callable` 这么棒，那该怎么用它呢？这里要引入它的两个黄金搭档：`ExecutorService` 和 `Future`。
+
+你不能像 `new Thread(new Runnable())` 那样直接把 `Callable` 丢给一个 `Thread`。你需要一个更专业的“线程管理器”——**`ExecutorService` (线程池)**。
+
+整个流程就像去咖啡店点单：
+
+1. **`Callable`**：这是你的**订单**（比如，“做一杯手冲拿铁”）。
+2. **`ExecutorService`**：这是**咖啡店**。它管理着一群专业的咖啡师（线程）。
+3. **`executor.submit(myCallable)`**：你把订单（`Callable`）**提交**给咖啡店。
+4. **`Future<V>`**：咖啡店收下订单后，会给你一张**取餐票（Claim Ticket）**。这张票据，就是 `Future` 对象。
+
+`Future` (未来) 对象非常关键，它代表了一个**未来某个时刻才能完成的任务的结果**。你可以拿着这张“取餐票”做几件事：
+
+- `future.isDone()`: 问一下“我的咖啡做好了吗？” (检查任务是否完成)。
+- `future.get()`: **凭票取餐**。这个方法会**阻塞**，也就是说，如果咖啡还没做好，你会一直在这里等着，直到咖啡师把做好的咖啡（`call()` 方法的返回值）递给你。如果制作过程中出了问题（`call()` 抛了异常），那么你在取餐时就会被告知这个坏消息（`get()` 方法会抛出异常）。
+
+---
+
+**完整代码栗子**
+
+下面是一个完整的例子，模拟一个需要花点时间计算结果的任务。
+
+```java
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+
+// 1. 创建一个“顾问”类，实现 Callable 接口
+//    我们指定它能返回一个 Integer 类型的结果
+class SumCalculator implements Callable<Integer> {
+    private int n;
+
+    public SumCalculator(int n) {
+        this.n = n;
+    }
+
+    // 2. 在 call() 方法中实现耗时的业务逻辑
+    @Override
+    public Integer call() throws Exception {
+        System.out.println("子线程 " + Thread.currentThread().getName() + " 开始计算...");
+        int sum = 0;
+        for (int i = 1; i <= n; i++) {
+            sum += i;
+            Thread.sleep(100); // 模拟耗时
+        }
+        System.out.println("子线程计算完毕！");
+        return sum;
+    }
+}
+
+public class CallableExample {
+    public static void main(String[] args) throws Exception {
+        System.out.println("主线程 " + Thread.currentThread().getName() + " 启动。");
+
+        // 3. 创建一个“咖啡店”（线程池），这里只雇佣一个“咖啡师”（线程）
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+
+        // 4. “提交订单”，并拿到“取餐票” (Future)
+        System.out.println("提交计算任务 (1到10求和)...");
+        Callable<Integer> task = new SumCalculator(10);
+        Future<Integer> future = executor.submit(task);
+
+        // 5. 主线程可以先去做点别的事情
+        System.out.println("主线程去做别的事了...");
+        Thread.sleep(300); // 比如处理其他逻辑
+
+        // 6. 事情做完了，现在需要计算结果了，于是“凭票取餐”
+        System.out.println("主线程现在需要计算结果，开始等待 future.get()...");
+        // future.get() 会阻塞，直到子线程的 call() 方法返回结果
+        Integer result = future.get();
+        System.out.println("成功拿到结果: " + result);
+
+        // 7. 关闭“咖啡店”，否则程序不会退出
+        executor.shutdown();
+        System.out.println("主线程结束。");
+    }
+}
+```
+
+---
+
 
 
 
@@ -5028,6 +5164,518 @@ public class Test {
 1. 这个**只是一个”提示“**，它不是命令。调度器完全可以无视你的优先级设置。
 2. **平台依赖性极强**：Java 的 10 个优先级等级如何映射到你的操作系统底层的优先级是**不确定**的。在 Windows 上，优先级 8 和 9 可能没区别；但在 Linux 上，它们可能差异巨大。这导致你的程序在不同系统上的行为可能完全不同。
 3. **可能导致线程饥饿 (Starving)**：如果一个系统非常繁忙，低优先级的线程可能长时间得不到 CPU 时间，永远无法完成它的任务，这就是“线程饥饿”，是一个严重的 BUG。
+
+---
+
+**以下是一些 Thread 类的常用方法，上下笔记不是同一时间记录的**
+
+**表格一：核心生命周期方法**
+
+这是控制一个线程启动和执行任务最核心的方法。
+
+| 方法 (Method) | 类型 (Type) | 描述 (Description)                                           | 小橘的小提示 🐾                                               |
+| ------------- | ----------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| `start()`     | 实例方法    | **启动线程**。调用此方法会创建一个新的系统级线程，并告诉 Java 虚拟机(JVM)去调度这个线程。当轮到它执行时，JVM 会自动调用该线程的 `run()` 方法。 | **最重要的启动方法！** 永远是通过调用 `start()` 来启动一个新线程，**绝对不要**直接调用 `run()`！直接调用 `run()` 只是在当前线程里执行一个普通方法而已。 |
+| `run()`       | 实例方法    | **线程的任务体**。你需要执行的业务逻辑就写在这里面（或者写在传入的 `Runnable` 的 `run` 方法里）。 | 我们通常是重写这个方法或者传入一个 `Runnable`，但很少会主动去调用它。 |
+
+
+------
+
+**表格二：线程协作与中断方法**
+
+这些方法用于让线程之间进行通信、等待或者请求中断。
+
+| 方法 (Method)                  | 类型 (Type) | 描述 (Description)                                           | 小橘的小提示 🐾                                               |
+| ------------------------------ | ----------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| `join()` / `join(long millis)` | 实例方法    | **等待线程结束**。当前线程会暂停执行（进入等待状态），直到这个 `join()` 方法所属的线程执行完毕。 | 主线程调用 `t1.join()` 就像在说：“t1，你先忙，我在这里等你忙完再继续。” 这是实现线程同步的一种简单方式。 |
+| `interrupt()`                  | 实例方法    | **请求中断线程**。它并不会粗暴地终止一个线程，而是向该线程发送一个“中断请求”信号，并设置线程的中断状态为 `true`。 | 这是一个“礼貌的”请求。正在运行的线程需要自己通过检查中断状态 (`isInterrupted()`) 来决定是否要响应中断。如果线程正处于 `sleep` 或 `wait` 状态，则会抛出 `InterruptedException`。 |
+| `isInterrupted()`              | 实例方法    | **检查中断状态**。检查此线程是否已被中断，但**不会**清除中断状态。 | 在循环任务中，可以用它来作为退出循环的条件，从而优雅地响应中断请求。 |
+
+
+------
+
+**表格三：静态工具方法**
+
+这些方法是直接通过 `Thread` 类名调用的，通常作用于**当前正在执行**的线程。
+
+| 方法 (Method)               | 类型 (Type) | 描述 (Description)                                           | 小橘的小提示 🐾                                               |
+| --------------------------- | ----------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| `Thread.currentThread()`    | 静态方法    | **获取当前线程**。返回当前正在执行这段代码的 `Thread` 对象。 | 非常有用！可以用来获取当前线程的名字、ID等信息，方便调试和打日志。 |
+| `Thread.sleep(long millis)` | 静态方法    | **使当前线程休眠**。让当前线程暂停执行指定的毫秒数。         | 它会抛出 `InterruptedException`，所以需要 `try-catch`。它不会释放任何锁。 |
+| `Thread.yield()`            | 静态方法    | **线程让步**。一个“建议”，暗示线程调度器当前线程愿意放弃CPU，让其他同优先级的线程有机会执行。 | 只是一个建议，调度器不一定会采纳。在实际开发中很少使用。     |
+
+
+------
+
+**表格四：属性设置与获取方法**
+
+
+| 方法 (Method)                          | 类型 (Type) | 描述 (Description)                                           |
+| -------------------------------------- | ----------- | ------------------------------------------------------------ |
+| `getName()` / `setName(String name)`   | 实例方法    | 获取或设置线程的名字。                                       |
+| `getId()`                              | 实例方法    | 获取线程的唯一ID（一个 `long` 类型的数字）。                 |
+| `getPriority()` / `setPriority(int p)` | 实例方法    | 获取或设置线程的优先级（1-10）。                             |
+| `isDaemon()` / `setDaemon(boolean on)` | 实例方法    | 判断是否为/设置为**守护线程**。                              |
+| `getState()`                           | 实例方法    | 获取线程的当前状态（如 `NEW`, `RUNNABLE`, `BLOCKED`, `TERMINATED` 等）。 |
+
+
+------
+
+**⚠️ 表格五：已废弃或不推荐的方法**
+
+下面这些方法因为存在**严重的安全隐患**（比如容易导致死锁或数据不一致），已经被明确废弃，**绝对不要在你的代码中使用它们**！
+
+| 方法 (Method) | 类型 (Type) | 描述 (Description)           | 为什么不能用？                                               |
+| ------------- | ----------- | ---------------------------- | ------------------------------------------------------------ |
+| `stop()`      | 实例方法    | （已废弃）粗暴地终止线程。   | 极度不安全！它会立即释放线程持有的所有锁，可能导致共享数据处于不一致的“脏”状态，破坏程序逻辑。 |
+| `suspend()`   | 实例方法    | （已废弃）挂起线程。         | 极易导致**死锁**。如果一个线程在持有某个锁的时候被挂起，它将永远不会释放这个锁，其他需要这个锁的线程都会被永久阻塞。 |
+| `resume()`    | 实例方法    | （已废弃）恢复被挂起的线程。 | 与 `suspend()` 配套使用，同样是死锁的根源。                  |
+
+
+
+#### 3.4 线程安全
+
+**什么是线程安全？(一个生活中的例子)**
+
+在解释技术概念前，我们先来看一个经典的例子：**夫妻联名银行账户**。
+
+- **共享资源**：一个银行账户，余额 **1000** 元。
+- **多个线程**：你 和 你的伴侣，两人手上各有一张针对这个账户的银行卡。
+- **操作**：你们俩在不同地方的 ATM 机上，**在同一瞬间**，都想取款 **800** 元。
+
+**如果程序是“线程不安全”的，可能会发生以下情况：**
+
+1. **你的 ATM 机**：读取账户余额，屏幕显示“1000元”。
+2. **伴侣的 ATM 机**：几乎在同一时刻也读取了余额，屏幕也显示“1000元”。
+3. **你的 ATM 机**：你确认取款。机器心想：“1000 - 800 = 200”，于是吐出800元，并准备把余额更新为200元。
+4. **伴侣的 ATM 机**：你也确认取款。这台机器也心想：“1000 - 800 = 200”，于是也吐出800元，并也准备把余额更新为200元。
+5. **银行后台**：你的操作先完成了，账户余额被更新为 **200** 元。
+6. **银行后台**：紧接着，你伴侣的操作也完成了，账户余额**又一次**被更新为 **200** 元。
+
+**最后的结果是**：你们俩一共取走了 **1600** 元，但账户余额却显示还有 **200** 元。银行白白损失了600元！这就是典型的线程不安全问题，因为多线程的交错执行，导致了最终结果的错误。
+
+**线程安全的定义**： 当多个线程同时访问同一个共享、可变的数据（比如一个对象、一个变量）时，如果程序的行为和我们预期的单线程环境下的行为完全一样，不会因为多线程的交错执行而产生任何意想不到的错误结果，那么我们就称这段代码是**线程安全**的。
+
+---
+
+**线程安全问题的三大“元凶”**
+
+为什么会发生线程不安全？根源主要来自并发编程的三个核心问题：
+
+1. **原子性 (Atomicity)**
+
+原子性指的是，一个或多个操作，要么全部执行成功，要么一个都不执行，中间不能被任何其他线程打断。
+
+- **问题所在**：很多我们看起来是一步完成的操作，在底层其实是由多步组成的。最经典的例子就是 `count++`。
+  - 它至少包含三步：1. 读取 `count` 的值；2. 将值加 1；3. 将新值写回 `count`。
+  - 多线程环境下，一个线程可能刚做完第1步，就被切换出去了。另一个线程此时也来执行 `count++`，这就会导致两个线程都基于旧值进行计算，最终结果 `count` 只增加了1，而不是2。
+- **银行例子**：“读取余额 -> 计算新余额 -> 写入新余额”这个过程就不是原子的。
+
+2. **可见性 (Visibility)**
+
+可见性指的是，当一个线程修改了一个共享变量的值，其他线程能够**立即**看到这个修改。
+
+- **问题所在**：为了提高性能，每个线程可能会把需要操作的共享变量从**主内存 (Main Memory)** 拷贝一份到自己的**工作内存 (CPU Cache)** 中。线程直接在自己的高速缓存里进行修改，但这个修改**不一定会立刻同步回主内存**。
+- 这就导致，线程A已经把变量改了，但线程B看不到，它还在用自己缓存里的旧值在工作，导致数据不一致。
+- **小橘的比喻**：就像你和我在协同编辑一篇 Google 文档。你突然切换到了“离线模式”（工作内存），在本地做了很多修改。在我看来（主内存），这篇文档一个字都没变，直到你重新“上线同步”的那一刻，我才能看到你的所有修改。
+
+3. **有序性 (Ordering)**
+
+有序性指的是，程序执行的顺序按照代码的先后顺序执行。
+
+- **问题所在**：为了优化性能，编译器和处理器可能会对我们写的代码指令进行**重排序 (Reordering)**。
+- 在单线程环境下，重排序不会影响最终结果，所以是安全的。但在多线程环境下，一个线程的指令重排序可能会被另一个线程观察到，从而导致意想不到的诡异问题。
+- **小橘的比喻**：做蛋糕的步骤是 1. 预热烤箱；2. 把蛋糕放进去。一个“聪明的”机器人（编译器）为了节省时间，可能会把步骤重排成 2 -> 1，因为它觉得这两步没有直接的依赖关系。结果可想而知，蛋糕烤出来是生的。
+
+
+
+#### 3.5 线程同步
+
+线程同步是线程安全问题的解决方案，其核心思想是**让多个线程先后依次访问共享资源，这样就可以避免出现线程安全问题**。这本质上并不是将其变成了单线程，而是让部分代码块执行时让线程依次排队，例如对于上述例子，只在取钱的时候排队即可。
+
+1. **同步方法 (Synchronized Method)**
+
+这是 `synchronized` 最简单直接的用法，直接用它来修饰一个方法。
+
+**小橘的比喻 🐾**：你可以把一个对象实例想象成一个**带锁的房间**。同步方法就相当于给这个房间的**整个大门**加了一把锁。一个线程进去了，就把门从里面锁上，其他任何想进这个门的线程都得在外面排队等着。
+
+**A. 修饰实例方法 (Instance Method)**
+
+当 `synchronized` 修饰一个普通的、非静态的实例方法时，它获取的锁是 **`this` 对象**的锁，也就是**当前这个方法所属的实例对象**。
+
+```java
+public class Worker {
+    private int count = 0;
+
+    // 锁的是 this，也就是 Worker 的实例对象 (比如 worker1)
+    public synchronized void increment() {
+        count++;
+    }
+}
+
+// ---- 使用时 ----
+Worker worker1 = new Worker();
+Worker worker2 = new Worker();
+
+// 线程A 调用 worker1.increment() -> 获得了 worker1 对象的锁
+// 线程B 调用 worker1.increment() -> 必须等待，因为 worker1 的锁被线程A占着
+
+// 线程C 调用 worker2.increment() -> 获得了 worker2 对象的锁，可以和线程A、B并发执行
+// 因为 worker1 和 worker2 是两个不同的对象，它们有两把不同的锁！
+```
+
+**B. 修饰静态方法 (Static Method)**
+
+当 `synchronized` 修饰一个静态方法时，它获取的锁**不是 `this` 对象**（因为静态方法不属于任何实例，没有 `this`），而是这个方法所属的**类的 Class 对象**的锁（例如 `Worker.class`）。
+
+```java
+public class Worker {
+    private static int staticCount = 0;
+
+    // 锁的是 Worker.class 这个对象
+    public static synchronized void incrementStatic() {
+        staticCount++;
+    }
+}
+
+// ---- 使用时 ----
+// 线程A 调用 Worker.incrementStatic() -> 获得了 Worker.class 对象的锁
+// 线程B 调用 Worker.incrementStatic() -> 必须等待，因为 Worker.class 的锁只有一个
+
+// 即使你有 worker1 和 worker2 两个实例，它们调用静态方法时，
+// 争抢的都是同一把类级别的锁。
+```
+
+**关键点**：因为一个类的 `Class` 对象在 JVM 中只有一个，所以静态同步方法锁的范围是**类级别**的，会影响这个类的所有实例。
+
+---
+
+2. **同步代码块 (Synchronized Block)**
+
+同步方法用起来简单，但它会把整个方法都锁住，锁的粒度太粗了。有时候我们一个方法里只有几行代码是需要同步的，其他代码则可以并发执行。这时，更灵活的同步代码块就派上用场了。
+
+**小橘的比喻 🐾**：同步代码块就像不在整个房间大门上锁，而是在房间里放了一个**贵重的保险箱**。你只有在需要操作保险箱里的东西时，才去把保险箱锁上。其他时候，别人还是可以自由进出房间，做一些和保险箱无关的事情。
+
+它的语法是：
+
+```java
+synchronized (lockObject) {
+    // 这部分是需要同步的代码，也叫“临界区”
+}
+```
+
+**它的核心优势：可以明确指定用哪个对象的锁！**
+
+**A. 锁定 `this` 对象** 这在功能上等同于同步实例方法，但可以减小锁的范围（粒度）。
+
+```java
+public void someMethod() {
+    // ... 这里是一些不需要同步的代码，可以并发执行 ...
+    System.out.println("准备进入同步区");
+
+    synchronized (this) {
+        // ... 这里是需要同步的关键代码 ...
+        // 和 public synchronized void criticalPart() {} 效果类似
+    }
+
+    // ... 这里又是可以并发执行的代码 ...
+}
+```
+
+**B. 锁定任意指定的对象（推荐的最佳实践）** 我们可以专门创建一个对象用来当“锁”，这能避免很多潜在的问题。
+
+```java
+public class Worker {
+    private int count1 = 0;
+    private int count2 = 0;
+    
+    // 创建两个专用的锁对象，它们是私有的、不可变的
+    private final Object lock1 = new Object();
+    private final Object lock2 = new Object();
+
+    public void incrementCounters() {
+        // 对 count1 的操作，使用 lock1
+        synchronized (lock1) {
+            count1++;
+        }
+        
+        // 对 count2 的操作，使用 lock2
+        synchronized (lock2) {
+            count2++;
+        }
+        // 使用不同的锁，让操作 count1 和 count2 的线程可以互不干扰地并发执行！
+    }
+}
+```
+
+**优点**：使用一个私有的、final的锁对象，可以防止外部代码意外地获取到你的锁，造成不必要的竞争或死锁。
+
+**C. 锁定类的 `Class` 对象** 这在功能上等同于同步静态方法。
+
+```java
+public void someMethod() {
+    synchronized (Worker.class) {
+        // 这里的代码和 static synchronized 方法效果一样
+    }
+}
+```
+
+---
+
+**通过 Lock 和 ReentrantLock 来实现线程同步**
+
+**为什么有了 `synchronized` 还需要 `Lock`？**
+
+`synchronized` 关键字用起来非常简单，JVM 会帮你自动加锁和解锁，不容易出错。但它的简单也带来了一些局限性：
+
+- 如果拿不到锁，线程会一直傻等下去，无法中断。
+- 无法知道是否成功获取了锁。
+- 不够灵活，只有一个非公平的锁模式。
+
+为了提供更精细的控制，Java 在 `java.util.concurrent.locks` 包（简称 JUC）中提供了一套全新的锁机制，其核心就是 `Lock` 接口。
+
+---
+
+`Lock` **接口：一个更专业的锁规范**
+
+`Lock` 是一个接口，它定义了一套比 `synchronized` 更丰富的锁操作。主要有：
+
+- `void lock()`: 获取锁。如果锁已被其他线程持有，则当前线程**阻塞**等待。这是最基础的加锁方式。
+- `void unlock()`: 释放锁。
+- `boolean tryLock()`: **尝试获取锁**。立即返回，如果成功获取锁则返回 `true`，否则返回 `false`。线程不会阻塞。
+- `boolean tryLock(long time, TimeUnit unit)`: **带超时的尝试**。在指定时间内尝试获取锁，如果超时仍未获取到，则返回 `false`。
+- `void lockInterruptibly()`: **可中断的获取锁**。在等待获取锁的过程中，如果当前线程被中断 (`interrupt()`)，它会立刻停止等待并抛出 `InterruptedException`。
+
+---
+
+`ReentrantLock`：`Lock` **接口的明星实现**
+
+`ReentrantLock` 是 `Lock` 接口最常用、功能最强大的实现类。它被称为“可重入锁”。
+
+**特性一：可重入性 (Reentrancy)**
+
+这是它名字的由来，也是它和 `synchronized` 的一个共同点。
+
+- **含义**：指的是同一个线程可以**多次**获取**同一把锁**，而不会自己把自己锁死。
+- **小橘的比喻 🐾：你家的钥匙** 你用钥匙打开了房子的**大门**（第一次获取锁），进入了客厅。然后你发现你的**卧室门**也需要用**同一把钥匙**才能打开。因为钥匙已经在你手上了，所以你可以直接再次用它打开卧室门（第二次获取锁），而不会被锁在客厅。
+- **工作原理**：`ReentrantLock` 内部有一个计数器。线程第一次 `lock()` 时，计数器变为1。如果该线程再次 `lock()`，计数器就变为2。每次 `unlock()`，计数器减1。只有当计数器减到0时，这个锁才被真正释放，其他线程才能获取它。
+
+**特性二：公平策略 (Fairness Policy)**
+
+这是 `ReentrantLock` 远比 `synchronized` 灵活的地方。你可以在创建它的时候，选择它是否是一个“公平锁”。
+
+- `new ReentrantLock()` 或 `new ReentrantLock(false)`：**非公平锁（默认）**
+  - **规则**：“不排队，谁能抢到就是谁的”。当锁被释放时，等待队列中的线程和刚来的新线程一起竞争，可能一个刚来的线程“插队”成功，抢到了锁。
+  - **优点**：吞吐量更高，整体性能较好。
+- `new ReentrantLock(true)`：**公平锁**
+  - **规则**：“严格排队，先来后到”。当锁被释放时，会优先把它交给在等待队列中等待时间最长的那个线程。
+  - **优点**：可以避免某些线程永远抢不到锁的“饥饿”现象。
+  - **缺点**：需要维护队列，上下文切换更频繁，性能开销比非公平锁大。
+
+**特性三：灵活的加锁方式**
+
+`ReentrantLock` 完整实现了 `Lock` 接口定义的所有方法，比如 `tryLock()` 和 `lockInterruptibly()`，这为处理复杂的并发场景提供了 `synchronized` 不具备的强大能力。
+
+---
+
+**使用 `ReentrantLock` 的“黄金法则”：**`try-finally`
+
+由于 `ReentrantLock` 是“手动挡”，加锁和解锁都得我们自己来。为了保证锁一定会被释放（即使在代码出现异常的情况下），我们**必须**把 `unlock()` 操作放在 `finally` 代码块中。
+
+**这是使用 `ReentrantLock` 的标准范式，一定要牢记！**
+
+```java
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+
+public class ReentrantLockExample {
+    private final Lock lock = new ReentrantLock();
+    private int count = 0;
+
+    public void increment() {
+        lock.lock(); // 1. 加锁
+        try {
+            // 2. 将所有需要保护的业务逻辑放在 try 块中
+            count++;
+        } finally {
+            // 3. ！！！必须在 finally 块中解锁！！！
+            lock.unlock();
+        }
+    }
+}
+```
+
+**为什么必须这样？** 如果 `try` 块中的代码抛出了异常，程序会立刻跳转去处理异常，`lock.unlock()` 如果不在 `finally` 中，它就会被跳过。这会导致锁永远不被释放，其他所有等待这把锁的线程都会被永久阻塞，程序就“死”了。
+
+---
+
+**使用建议**
+
+- **首选 `synchronized`**：在绝大多数情况下，`synchronized` 的功能和性能已经足够好，而且它更简单、更安全（不会忘记解锁）。所以，当 `synchronized` 能满足你的需求时，就优先使用它。
+- **需要高级功能时才用 `ReentrantLock`**：只有当你明确需要 `ReentrantLock` 提供的那些 `synchronized` 不具备的“特异功能”时，比如公平锁、可中断的等待、尝试获取锁等，才应该使用它。
+
+
+
+#### 3.6 线程池
+
+**1. 为什么需要线程池？(The "Why")**
+
+我们之前学习了 `new Thread(...)` 和 `FutureTask`，可以手动创建线程。但这就像每次有客人来访，你都得跑去商场买一套新家具，客人走了再把家具扔掉一样，非常麻烦且浪费。
+
+手动创建线程有三大“原罪”：
+
+1. **创建和销毁的开销巨大**：`new Thread()` 会涉及到向操作系统申请资源、分配内存等一系列重量级操作，非常耗时。任务执行完后销毁线程同样有开销。
+2. **可能耗尽系统资源**：如果不加限制地 `new Thread()`，当并发任务量激增时，会创建成百上千个线程。这会急剧消耗 CPU 和内存资源，导致系统性能急剧下降，甚至崩溃 (`OutOfMemoryError`)。
+3. **缺乏统一管理**：我们无法方便地控制同时运行的线程数量、无法复用线程、也无法对线程进行统一的监控和管理。
+
+为了解决这些问题，**线程池**应运而生。
+
+**小橘的比喻 🐾：共享办公室** 你可以把线程池想象成一个**拥有固定工位的共享办公室**。
+
+- **工位（线程）**：办公室里有固定数量的工位，这些工位一直都在，不需要每次来新人就临时搭建。
+- **员工（任务）**：需要处理的工作（`Runnable` / `Callable`）就是一个个来上班的员工。
+- **工作流程**：
+  1. 一个员工（任务）来了，直接找一个空工位（空闲线程）坐下开始工作。
+  2. 如果所有工位都满了，新来的员工就在**等候区（任务队列）** 排队。
+  3. 当有员工完成工作离开工位后，他**不会把工位拆掉**，而是把它空出来，让等候区的下一位员工坐进来继续工作。
+
+**线程池的核心思想就是：通过复用已经创建好的线程，来避免频繁创建和销毁线程带来的开销，同时还能统一管理和控制系统中的并发线程数量。**
+
+---
+
+**2. 如何创建线程池？**
+
+在 Java 中，创建线程池主要有两种方式：
+
+1. **通过 `ThreadPoolExecutor` 的构造函数**：这是最底层、最强大、也是官方最推荐的方式，可以对线程池的每一个细节进行精细控制。
+2. **通过 `Executors` 工厂类**：这是一个工具类，提供了一些静态方法，可以快速创建几种预设好参数的常用线程池。
+
+**A. “究极DIY”模式：`ThreadPoolExecutor` 构造函数**
+
+这是线程池的“完全体”，理解了它的参数，就理解了所有线程池的运行原理。它有7个核心参数：
+
+```java
+public ThreadPoolExecutor(
+    int corePoolSize,        // 1. 核心线程数
+    int maximumPoolSize,     // 2. 最大线程数
+    long keepAliveTime,      // 3. 空闲线程存活时间
+    TimeUnit unit,           // 4. 时间单位
+    BlockingQueue<Runnable> workQueue, // 5. 任务队列
+    ThreadFactory threadFactory,     // 6. 线程工厂
+    RejectedExecutionHandler handler // 7. 拒绝策略
+);
+```
+
+**小橘用办公室的例子来解释这“七龙珠”：**
+
+1. `corePoolSize`：**正式员工数**。办公室里常驻的员工数量，即使没事做他们也不会被开除（默认情况下）。
+2. `maximumPoolSize`：**总员工数上限**。办公室能容纳的最大员工数（正式工 + 临时工）。
+3. `keepAliveTime`：**临时工的存活时间**。当工作量减少，临时工没事做时，他们能继续待在办公室里等新活儿的最长时间。
+4. `unit`：存活时间的**单位**（秒、分钟等）。
+5. `workQueue`：**等候区**。当所有正式工都在忙时，新来的任务（员工）在这个队列里排队。
+6. `threadFactory`：**人力资源部(HR)**。负责招聘新员工（创建新线程），可以给他们统一取名、设置是否为守护线程等。
+7. `handler`：**门卫/接待**。当办公室满员（达到最大员工数）且等候区也满了的时候，用来处理新来的任务的策略。比如：
+   - `AbortPolicy` (默认): 直接拒绝，抛出异常。
+   - `CallerRunsPolicy`: 让提交任务的那个线程自己去执行这个任务。
+   - `DiscardPolicy`: 默默地把任务丢掉，啥也不干。
+   - `DiscardOldestPolicy`: 丢掉等候区里排队最久的那个任务，然后尝试把新任务加进去。
+
+**B. “快捷套餐”模式：`Executors` 工厂类**
+
+`Executors` 工具类提供了一些方便的静态方法，帮你快速创建几种特定类型的线程池。
+
+1. `Executors.newFixedThreadPool(int n)`: **创建固定大小的线程池**。
+   - 就像一个**只有 `n` 个正式工**的办公室，没有临时工。
+   - 特点：`corePoolSize` 和 `maximumPoolSize` 相等。能有效控制并发数。
+   - 风险：内部的任务队列是**无界**的 `LinkedBlockingQueue`，如果任务堆积过多，可能导致内存溢出(OOM)。
+2. `Executors.newCachedThreadPool()`: **创建可缓存的线程池**。
+   - 就像一个**只有临时工，来多少活就招多少人**的外包团队。
+   - 特点：`corePoolSize` 为0，`maximumPoolSize` 为 `Integer.MAX_VALUE`（几乎无限）。来一个任务，如果有空闲线程就复用，没有就立刻创建一个新线程。
+   - 风险：**非常危险！** 如果任务瞬间大量涌入，它会疯狂创建新线程，极易耗尽系统资源导致崩溃。
+3. `Executors.newSingleThreadExecutor()`: **创建单线程的线程池**。
+   - 就像一个**只有一个员工的“一人公司”**。
+   - 特点：保证所有任务都按照提交的顺序，在一个线程里**串行执行**。
+
+**⚠️ 现代Java开发最佳实践警告！** 像阿里巴巴等大厂的开发规范中，**明确禁止**使用 `Executors` 的这几个方法来创建线程池。原因就是它们的预设参数（如无界队列、无限大的最大线程数）隐藏了资源耗尽的风险。
+
+**最推荐的做法是**：根据你的业务场景，**总是通过 `ThreadPoolExecutor` 的构造函数来创建线程池**，并且**明确指定任务队列的容量**，这样你对线程池的行为有最清晰的掌控。
+
+---
+
+**代码栗子**
+
+```java
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+
+public class ThreadPoolExample {
+    public static void main(String[] args) {
+        // ---- 推荐方式：使用 ThreadPoolExecutor 构造函数 ----
+        System.out.println("--- 使用 ThreadPoolExecutor ---");
+        // 核心2个线程，最多4个，临时工存活1分钟，等候区容量10
+        ExecutorService customExecutor = new ThreadPoolExecutor(
+                2, 4, 60L, TimeUnit.SECONDS, new LinkedBlockingQueue<>(10),
+        );
+
+        for (int i = 1; i <= 5; i++) {
+            final int taskId = i;
+            customExecutor.submit(() -> {
+                System.out.println("任务 " + taskId + " 由线程 " + Thread.currentThread().getName() + " 执行");
+            });
+            // 如果是自定义的线程，例如叫做 task，则可以
+            // MyThread task = new MyThread();
+            // customExecutor.submit(task);
+        }
+        customExecutor.shutdown(); // 记得关闭线程池！
+
+        // ---- 了解即可：使用 Executors 工厂方法 ----
+        // ExecutorService fixedExecutor = Executors.newFixedThreadPool(2);
+    }
+}
+```
+
+---
+
+`ExecutorService` 是我们与线程池交互的核心接口。它的方法主要可以分为三大类：**任务提交**、**生命周期管理**和**批量提交**。
+
+**表格一：任务提交方法**
+
+这是我们使用线程池最频繁的操作，即“派发工作”。
+
+| 方法 (Method)                     | 返回类型 (Return Type) | 描述 (Description)                                           | 小橘的小提示 🐾                                               |
+| --------------------------------- | ---------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| `submit(Runnable task)`           | `Future<?>`            | 提交一个不需要返回值的 `Runnable` 任务去执行。               | 虽然 `Runnable` 本身不返回值，但 `submit` 方法依然会返回一个 `Future<?>` 对象。你可以用这个 `Future` 来判断任务是否执行完毕 (`isDone()`)，或者通过 `.get()` 来捕获任务中可能抛出的异常。 |
+| `submit(Callable<T> task)`        | `Future<T>`            | 提交一个需要返回值的 `Callable` 任务去执行。                 | **最常用的方式**。通过返回的 `Future<T>` 对象，我们可以在未来的某个时间点，通过 `.get()` 方法获取任务的执行结果。 |
+| `submit(Runnable task, T result)` | `Future<T>`            | 提交一个 `Runnable` 任务，并额外提供一个“结果”对象。当任务成功执行完毕后，返回的 `Future` 的 `.get()` 方法将返回你提供的这个 `result` 对象。 | 这是一个比较特殊的用法，可以用来在任务完成后返回一个固定的成功标识。 |
+| `execute(Runnable command)`       | `void`                 | **“即发即忘”**。提交一个 `Runnable` 任务，但不提供任何方式来追踪它的执行结果。 | 与 `submit(Runnable)` 的核心区别在于它**没有返回值**。你无法知道任务何时完成，也无法捕获任务中的异常。因此，在大多数情况下，**更推荐使用 `submit` 方法**。 |
+
+---
+
+**表格二：线程池生命周期管理方法**
+
+这些方法至关重要！一个忘记关闭的线程池，会导致你的应用程序无法正常退出。
+
+| 方法 (Method)                                | 返回类型 (Return Type) | 描述 (Description)                                           | 小橘的小提示 🐾                                               |
+| -------------------------------------------- | ---------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| `shutdown()`                                 | `void`                 | **优雅关闭**。线程池会拒绝接收任何**新**提交的任务，但会继续执行**已经提交**的所有任务（包括在队列中等待的）。 | 最常用、最推荐的关闭方式。就像办公室下班了，接待处不接新活儿了，但里面的员工会把自己手头的工作做完再走。 |
+| `shutdownNow()`                              | `void`                 | **立即关闭**。线程池会立刻停止接收新任务，并**尝试中断**所有正在执行的任务，同时返回等待队列中尚未开始执行的任务列表。 | 非常粗暴的方式，像拉电闸。只有在需要紧急停止的特殊情况下才使用，因为它会中断正在进行的工作。 |
+| `isShutdown()`                               | `boolean`              | 判断线程池是否已经调用了 `shutdown()` 或 `shutdownNow()`。   | 调用 `shutdown()` 后，这个方法会立刻返回 `true`。            |
+| `isTerminated()`                             | `boolean`              | 判断线程池是否**已经完全终止**。                             | 只有在调用了 `shutdown()` 或 `shutdownNow()`，**并且**所有任务都已经执行完毕后，这个方法才会返回 `true`。 |
+| `awaitTermination(long time, TimeUnit unit)` | `boolean`              | **等待关闭**。调用此方法的线程会被阻塞，直到线程池完全终止，或者等待超时。 | 这是一个非常有用的方法！主线程可以调用它来安全地等待线程池完成所有收尾工作。 |
+
+---
+
+**表格三：批量任务提交方法**
+
+当有一大批任务需要处理时，这些方法非常有用。
+
+| 方法 (Method)                 | 返回类型 (Return Type) | 描述 (Description)                                           | 小橘的小提示 🐾                                               |
+| ----------------------------- | ---------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| `invokeAll(Collection tasks)` | `List<Future<T>>`      | 提交一个 `Callable` 任务的集合，并**阻塞**等待，直到**所有**任务都执行完成。 | 返回一个与任务集合顺序对应的 `Future` 列表。适用于你需要等待所有并行任务都出结果后，才能进行下一步的场景。 |
+| `invokeAny(Collection tasks)` | `T`                    | 提交一个 `Callable` 任务的集合，并**阻塞**等待，直到**其中任意一个**任务成功完成，然后返回这个任务的结果。 | 一旦有一个任务完成，其他所有未完成的任务都会被取消。非常适合那种“谁先算出来就用谁的结果”的场景。 |
 
 
 
@@ -6180,7 +6828,849 @@ System.out.println(fruits); // 输出: [Apple, Cherry]
 
 #### 4.5 Java Stream
 
+`Stream` **流是什么？(The "What" and "Why")**
 
+在学习 `Stream` 之前，我们处理集合的方式，大多是写 `for` 循环，在循环内外写 `if` 判断，创建临时集合... 这种方式我们称为**命令式编程 (Imperative Programming)**，你是在一步步地告诉计算机“如何做”。
+
+`Stream` API 则带来了一种全新的**声明式编程 (Declarative Programming)** 思想。你不再关心“如何做”的细节，而是像写业务需求一样，清晰地描述出“**我想要什么**”。
+
+**小橘的终极比喻：工厂流水线 🐾** 这是理解 `Stream` 最棒的方式！
+
+- **数据源 (Source)**：就像一个**仓库**，里面堆满了原材料（比如我们的 `ArrayList<Product>`）。
+- **`Stream` (流)**：就是从仓库里延伸出来的一条**传送带**。原材料被一个个放到传送带上，准备接受加工。**它本身不存储任何东西**。
+- **中间操作 (Intermediate Operations)**：传送带上的**一台台加工机器**。比如：
+  - `filter()`: **筛选机**，不合格的原料从传送带上丢掉。
+  - `map()`: **变形机**，把原料加工成另一种形状（比如把 `Product` 对象变成它的 `String` 名字）。
+  - `sorted()`: **排序机**，把传送带上的半成品排个队。
+- **终端操作 (Terminal Operation)**：流水线**尽头的工人/打包机**。他会把最终加工好的产品收集起来（比如 `collect()`），或者数一下总共有多少个合格产品（`count()`），或者直接把产品拿去做某件事（`forEach()`）。
+
+**`Stream` 的核心就是：它不是一个数据结构，它就像一条处理数据的流水线，让数据源中的元素，一个接一个地流过这条线，进行一系列的加工处理，最后产生一个结果。**
+
+---
+
+**流水线三部曲：`Stream` 的使用步骤**
+
+一个典型的 `Stream` 操作，总是遵循以下三个步骤：
+
+**1. 获取流水线 (创建 `Stream`)**
+
+首先，你需要从你的数据源（仓库）那里，把传送带启动起来。最常见的方式就是调用集合的 `.stream()` 方法。
+
+```java
+List<String> list = List.of("Apple", "Banana", "Cherry");
+Stream<String> stream = list.stream(); // 流水线启动！
+```
+
+**2. 链接中间操作 (加工处理)**
+
+接下来，你可以在流水线上安装各种你需要的加工机器。这些操作可以一个接一个地链接起来，形成一条完整的加工链。
+
+这些中间操作有一个非常重要的特性：**惰性求值 (Lazy Evaluation)**。 这意味着，当你调用 `filter`, `map` 等方法时，**它们并不会立刻开始处理所有数据**！它们只是把这台“机器”安装到了流水线上。只有当“终端操作”这个总开关被按下时，数据才真正开始一个个地流过这些机器。
+
+**常用中间操作：**
+
+- `filter(Predicate<T> predicate)`: **筛选**。接收一个返回 `boolean` 的 Lambda，只有让 Lambda 返回 `true` 的元素才能通过。
+- `map(Function<T, R> mapper)`: **转换/映射**。把流中的每个元素 `T` 转换成另一种类型的元素 `R`。
+- `sorted()`: **排序**。对流中的元素进行自然排序。
+- `distinct()`: **去重**。去除流中重复的元素。
+
+**3. 执行终端操作 (获取结果)**
+
+这是流水线的最后一步，也是**触发所有计算**的一步。一个流只能有一个终端操作，一旦执行完毕，这个流就被“消耗”掉了，不能再被使用。
+
+**常用终端操作：**
+
+- `collect(Collectors.toList())`: **收集**。最常用的操作！把流中的所有元素收集到一个新的 `List` 中。
+- `forEach(Consumer<T> action)`: **遍历**。对流中的每个元素执行一个操作（比如打印）。
+- `count()`: **计数**。返回流中元素的总个数。
+- `findFirst()`, `findAny()`: **查找**。返回流中的第一个或任意一个元素，通常和 `filter` 搭配使用。
+- `anyMatch()`, `allMatch()`, `noneMatch()`: **匹配**。检查流中是否存在/全部是/全不是满足条件的元素，返回 `boolean`。
+
+---
+
+**一个完整的例子：从命令式到声明式**
+
+**需求**：我们有一个 `Product` 列表，现在需要找出所有价格低于500的商品，把它们的名字取出来，转换成大写，然后按字母顺序排序，最后存入一个新的 `List` 中。
+
+**以前的写法 (命令式编程):**
+
+```java
+List<Product> products = ... ; // 假设已初始化
+List<String> filteredNames = new ArrayList<>();
+// 1. 筛选和提取名字
+for (Product p : products) {
+    if (p.getPrice() < 500) {
+        filteredNames.add(p.getName());
+    }
+}
+// 2. 排序
+Collections.sort(filteredNames);
+// 3. 转换为大写
+List<String> finalResult = new ArrayList<>();
+for (String name : filteredNames) {
+    finalResult.add(name.toUpperCase());
+}
+// 哇，好复杂...
+```
+
+**`Stream` 的写法 (声明式编程):**
+
+```java
+List<Product> products = ... ; // 假设已初始化
+
+List<String> finalResult = products.stream()                 // 1. 启动流水线
+        .filter(p -> p.getPrice() < 500) // 2. 筛选机：价格低于500
+        .map(p -> p.getName())         // 3. 变形机：提取名字
+        .sorted()                      // 4. 排序机：按名字排序
+        .map(String::toUpperCase)      // 5. 变形机：转为大写
+        .collect(Collectors.toList()); // 6. 装箱机：打包成List
+
+System.out.println(finalResult);
+```
+
+看到区别了吗？`Stream` 的代码就像在**描述业务需求**，而不是在指挥计算机怎么一步步地干活。代码更短、更清晰、更不容易出错！
+
+---
+
+`Stream` **的关键特性总结**
+
+- **不是数据结构**：它不存储数据，只是数据的搬运工和加工者。
+- **不会修改数据源**：所有操作都是在流水线上生成新的结果，你原来的 `List` 不会受到任何影响。
+- **惰性求值**：中间操作只是构建处理流程，终端操作才会触发实际计算。
+- **只能消费一次**：一个 `Stream` 在被终端操作使用过后，就关闭了，不能重用。
+
+---
+
+**表格一：常用 `Stream` 中间操作 (加工机器)**
+
+| 方法 (Method)                       | 返回类型 (Return Type) | 描述 (Description)                                           | 小橘的小提示 🐾                                               |
+| ----------------------------------- | ---------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| `filter(Predicate p)`               | `Stream<T>`            | **筛选器**。根据传入的 Lambda 表达式（返回 `boolean`）来过滤元素，只有满足条件的元素才能通过。 | 最常用的操作之一，相当于 SQL 里的 `WHERE` 子句。             |
+| `map(Function mapper)`              | `Stream<R>`            | **变形器/映射器**。将流中的每个元素 `T` 转换为另一种类型 `R` 的元素。 | 也是最常用的操作之一。比如把 `Product` 对象变成 `String` 名字，或者把 `String` 变成它的长度 `Integer`。 |
+| `flatMap(Function mapper)`          | `Stream<R>`            | **扁平化变形器**。将一个 `Stream` 中的每个元素都转换成另一个 `Stream`，然后把所有这些小 `Stream` 连接成一个大的 `Stream`。 | 处理 `Stream<List<String>>` 变成 `Stream<String>` 的利器，用于“降维打击”！ |
+| `sorted()` / `sorted(Comparator c)` | `Stream<T>`            | **排序器**。对流中的元素进行排序。无参版本按自然顺序，有参版本按指定的比较器顺序。 |                                                              |
+| `distinct()`                        | `Stream<T>`            | **去重器**。去除流中重复的元素（根据 `equals()` 方法判断）。 | 底层实现依赖 `HashSet`，效率很高。                           |
+| `limit(long n)`                     | `Stream<T>`            | **截断器**。只保留流中的前 `n` 个元素。                      | 对于大数据量的流，这是一个“短路”操作，处理完n个元素后就会停止。常用于分页或获取 Top N。 |
+| `skip(long n)`                      | `Stream<T>`            | **跳过器**。跳过流中的前 `n` 个元素，保留剩下的。            | 和 `limit` 是好搭档，`skip(10).limit(5)` 可以用来实现分页获取第3页数据（每页5条）。 |
+| `peek(Consumer action)`             | `Stream<T>`            | **观察器**。对流经的每个元素执行一个操作，但**不改变**元素本身，然后原样传递给下一个操作。 | **调试神器！** 可以在不改变流的情况下，打印出流过每个阶段的元素，看看数据变成了什么样。 |
+
+---
+
+**表格二：常用 `Stream` 终端操作 (打包/终结)**
+
+| 分类          | 方法 (Method)                             | 返回类型 (Return Type) | 描述 (Description)                                           |
+| ------------- | ----------------------------------------- | ---------------------- | ------------------------------------------------------------ |
+| **收集结果**  | `collect(Collector c)`                    | `R` (由收集器决定)     | **打包机**。最强大的终端操作，可以将流中的元素收集到 `List`, `Set`, `Map` 或其他复杂容器中。 |
+|               | `toArray()` / `toArray(IntFunction gen)`  | `Object[]` / `A[]`     | **打包成数组**。将流中的元素收集到一个数组中。               |
+| **逐个处理**  | `forEach(Consumer action)`                | `void`                 | **逐个消费**。对流中的每个最终元素执行一个操作（比如打印）。 |
+|               | `forEachOrdered(Consumer action)`         | `void`                 | 类似 `forEach`，但在并行流 (parallel stream) 中能**保证**按原始顺序处理。 |
+| **聚合/归约** | `count()`                                 | `long`                 | **计数器**。返回流中元素的总数。                             |
+|               | `max(Comparator c)` / `min(Comparator c)` | `Optional<T>`          | **最值查找器**。根据比较器返回流中的最大或最小元素。返回 `Optional` 是为了处理流为空的情况。 |
+|               | `reduce(...)`                             | `Optional<T>` 或 `T`   | **通用归约器**。可以将流中的所有元素反复结合起来，得到一个单一的结果（如求和、求积）。 |
+| **条件匹配**  | `anyMatch(Predicate p)`                   | `boolean`              | **任意匹配**。检查流中**是否存在至少一个**元素满足条件。这是一个“短路”操作。 |
+|               | `allMatch(Predicate p)`                   | `boolean`              | **全部匹配**。检查流中**是否所有**元素都满足条件。这是一个“短路”操作。 |
+|               | `noneMatch(Predicate p)`                  | `boolean`              | **全不匹配**。检查流中**是否没有一个**元素满足条件。这是一个“短路”操作。 |
+| **查找元素**  | `findFirst()`                             | `Optional<T>`          | **查找第一个**。返回流中的第一个元素。这是一个“短路”操作。   |
+|               | `findAny()`                               | `Optional<T>`          | **查找任意一个**。在并行流中，性能比 `findFirst` 好，它找到任何一个满足条件的元素就立刻返回。 |
+
+
+
+### 5. Junit
+
+**测试驱动开发 (TDD)** 专业的开发者中流传着一种叫**测试驱动开发 (Test-Driven Development, TDD)** 的工作模式，其循环过程被称为“红-绿-重构”：
+
+- **红 (Red)**：先写一个**失败的**测试。因为你还没写任何功能代码，所以这个测试理应失败（在IDE里显示为红色）。这一步强迫你从“使用者”的角度思考：我希望我将要写的这个方法叫什么名字？它需要什么参数？我期望它返回什么结果？
+- **绿 (Green)**：编写**最少量**的功能代码，刚好能让刚才那个测试通过（在IDE里显示为绿色）。这时，你不用追求代码多优雅，哪怕写得很“丑”，只要能让测试通过就行。
+- **重构 (Refactor)**：现在你的功能是正确的（因为测试通过了），你可以放心地、大胆地去优化你的功能代码，把它变得更简洁、更高效、可读性更好。因为有测试作为“安全网”，你每次重构后，只要再跑一遍测试，就能确保你的优化没有破坏原有的正确功能。
+
+**TDD 这种先写测试再写代码的方式，能从根本上提升你的代码设计能力。**
+
+---
+
+在讲 `JUnit` 怎么用之前，我们先花30秒明确一下它的**目标**。
+
+**小橘的比喻 🐾：汽车工厂的质检员** 一个汽车工厂在组装一辆完整的汽车之前，会先对每一个独立的零件进行严格的质量检测：引擎能不能正常发动？刹车片耐不耐磨？车灯亮度够不够？
+
+只有确保了每一个**零件**都是合格的，最终组装起来的**整车**质量才有保障。
+
+**单元测试**做的就是这件事！它的核心思想，就是把我们复杂的程序拆分成一个个最小的、可测试的**“单元”**（通常是一个方法），然后针对这些小单元编写专门的测试代码，来确保它们在各种情况下都能正确工作。
+
+而 `JUnit` 就是我们用来编写和运行这些测试代码的**框架和工具集**。
+
+---
+
+`JUnit 5` 是目前的最新主流版本。它约定大于配置，使用起来非常方便，主要依靠**注解 (Annotation)** 和 **断言 (Assertion)**。
+
+**A. 核心注解：告诉 JUnit 怎么运行**
+
+注解就像是贴在方法上的“标签”，告诉 `JUnit` 这个方法扮演什么角色。
+
+- `@Test`: **最重要的标签**！被它标记的方法，就是一个独立的测试用例。JUnit 会自动找到并执行所有带 `@Test` 标签的方法。
+- `@BeforeEach`: 被它标记的方法，会在**每一个** `@Test` 方法运行**之前**执行一次。通常用来做一些初始化的“准备工作”，比如创建要测试的对象。
+- `@AfterEach`: 被它标记的方法，会在**每一个** `@Test` 方法运行**之后**执行一次。通常用来做一些“清理工作”，比如释放资源。
+- `@BeforeAll`: 被它标记的方法，会在**所有** `@Test` 方法运行**之前**，**只执行一次**。通常用来做一些全局的、比较耗时的初始化。注意：此方法必须是 `static` 的。
+- `@AfterAll`: 被它标记的方法，会在**所有** `@Test` 方法运行**之后**，**只执行一次**。用来释放全局资源。注意：此方法也必须是 `static` 的。
+
+**执行顺序就像这样：** `@BeforeAll` -> `@BeforeEach` -> `@Test 1` -> `@AfterEach` -> `@BeforeEach` -> `@Test 2` -> `@AfterEach` -> `@AfterAll`
+
+**B. 断言：判断对错的“裁判”**
+
+光执行代码还不行，我们得知道代码执行的结果**对不对**。**断言**就是用来做判断的。
+
+断言是一系列静态方法，来自 `org.junit.jupiter.api.Assertions` 类。
+
+- `assertEquals(expected, actual)`: **最常用的断言**。判断“期望的结果”和“实际运行出来的结果”是否相等。
+- `assertTrue(boolean condition)` / `assertFalse(boolean condition)`: 断言一个条件是 `true` 还是 `false`。
+- `assertNotNull(Object obj)` / `assertNull(Object obj)`: 断言一个对象不是 `null` 或者是 `null`。
+- `assertThrows(Class<T> exceptionType, Executable executable)`: 断言当执行某段代码时，**一定会抛出**指定类型的异常。这对于测试代码的错误处理逻辑非常重要！
+
+---
+
+3. **一个完整的实战栗子：测试 `Calculator` 类**
+
+让我们理论结合实践，来测试一个简单的计算器类。
+
+**第1步：被测试的代码 (src/main/java)**
+
+首先，我们有一个需要被测试的 `Calculator` 类。
+
+```java
+// Calculator.java
+public class Calculator {
+    public int add(int a, int b) {
+        return a + b;
+    }
+
+    public double divide(int a, int b) {
+        if (b == 0) {
+            // 当除数为0时，我们期望它抛出一个异常
+            throw new IllegalArgumentException("Divisor cannot be zero");
+        }
+        return (double) a / b;
+    }
+}
+```
+
+**第2步：编写测试代码 (src/test/java)**
+
+在标准的 Maven/Gradle 项目结构中，测试代码放在 `src/test/java` 目录下。测试类的命名规范通常是 `被测试类名+Test`。
+
+```java
+// CalculatorTest.java
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+// 静态导入 Assertions 类，可以让代码更简洁
+import static org.junit.jupiter.api.Assertions.*;
+
+class CalculatorTest {
+
+    private Calculator calculator;
+
+    @BeforeEach
+    void setUp() {
+        // 在每个测试方法运行前，都创建一个新的 Calculator 实例
+        // 确保每个测试都是在干净、独立的环境下进行的
+        calculator = new Calculator();
+        System.out.println("一个新的计算器准备好了！");
+    }
+
+    @Test
+    void testAdd_PositiveNumbers() {
+        // AAA 模式：Arrange, Act, Assert
+        // 1. Arrange (准备): 准备测试数据，我们已经在 setUp 中准备了 calculator
+        int a = 2;
+        int b = 3;
+        int expected = 5;
+
+        // 2. Act (执行): 调用被测试的方法
+        int actual = calculator.add(a, b);
+
+        // 3. Assert (断言): 判断结果是否符合预期
+        assertEquals(expected, actual, "2 + 3 应该等于 5"); // 最后可以加一个可选的错误提示信息
+    }
+
+    @Test
+    void testDivide_NormalCase() {
+        assertEquals(5.0, calculator.divide(10, 2));
+    }
+
+    @Test
+    void testDivide_ByZero_ShouldThrowException() {
+        // 断言：当我们执行 lambda 表达式中的代码时...
+        // ...它一定会抛出一个 IllegalArgumentException 类型的异常
+        assertThrows(IllegalArgumentException.class, () -> {
+            calculator.divide(1, 0);
+        });
+    }
+}
+```
+
+**第3步：运行测试**
+
+你不需要写 `main` 方法！在 IntelliJ IDEA 或 Eclipse 这样的现代 IDE 中，你会在 `CalculatorTest` 类名和每个 `@Test` 方法的旁边看到一个**绿色的播放按钮**。直接点击这个按钮，IDE 就会自动运行 JUnit 测试，并给你一个报告（全绿代表通过，有红代表失败）。
+
+
+
+### 6. Java 中的反射
+
+1. **什么是反射？(The "Magic Mirror")**
+
+在正常情况下，我们是**在编译时**就已经确定了要操作哪个类的哪个方法。比如 `new Person().sayHi()`，编译器在编译代码的时候，就已经检查了 `Person` 类到底有没有 `sayHi()` 这个方法。
+
+而反射机制则允许我们的程序在**运行时 (Runtime)** 才去动态地了解和操作一个对象。
+
+**小橘的比喻 🐾：一面魔镜**
+
+- **正常情况**：你有一个 `Person` 对象，你只知道他能 `sayHi()`，你让他 `sayHi()`，他就说了。你是在**使用**他。
+- **反射**：你把这个 `Person` 对象拿到一面**魔镜**前。
+  1. **照镜子（内省/Introspection）**：魔镜会告诉你关于这个 `Person` 的一切秘密！“他继承自 `Object` 类，他有一个 `private` 的名叫 `name` 的 `String` 字段，他有一个 `public` 的名叫 `age` 的 `int` 字段，他有一个 `public` 的 `sayHi()` 方法，还有一个 `private` 的 `whisperSecret()` 方法...”
+  2. **通过镜子操控（动态操作）**：更神奇的是，你不仅能看，还能通过魔镜去操控镜子里的人。你可以对魔镜下令：“命令镜子里那个 `Person`，让他执行 `whisperSecret()` 这个他本来不轻易示人的私有方法！”，“把他 `private` 的 `name` 字段的值，给我改成‘小橘’！”
+
+**所以，Java 反射机制是指在程序运行时，对于任意一个类，都能够知道这个类的所有属性和方法；对于任意一个对象，都能够调用它的任意方法和属性。这种动态获取信息以及动态调用对象方法的功能，就是反射。**
+
+---
+
+2. **反射的“钥匙”：**`Class` **对象**
+
+要使用反射，第一步总是要拿到那面“魔镜”，在 Java 里，这面魔镜就是 `java.lang.Class` 类的实例，我们通常叫它 **`Class` 对象**。
+
+每个被加载到 JVM 中的类，都有且仅有一个与之对应的 `Class` 对象，它包含了这个类全部的元数据（metadata）。
+
+获取 `Class` 对象主要有三种方式：
+
+1. **通过类名 `.class`**：`Class<?> personClass = Person.class;` (最安全、性能最好，在编译时就知道类存在)
+2. **通过对象的 `.getClass()` 方法**：`Person p = new Person(); Class<?> personClass = p.getClass();` (当你手上只有一个对象实例时)
+3. **通过类的全限定名字符串**：`Class<?> personClass = Class.forName("com.example.Person");` (最动态！类名可以写在配置文件里，在运行时才加载，这是框架的常用方式)
+
+---
+
+3. **使用“魔镜”：**`Field`, `Method`, `Constructor`
+
+拿到了 `Class` 对象这把钥匙之后，我们就可以开始探索和操作了。主要通过以下三种对象：
+
+- **`Field`**: 代表类的**成员变量（字段）**。
+  - `getFields()`: 获取所有 `public` 的字段。
+  - `getDeclaredFields()`: 获取**所有**已声明的字段（包括 `private`, `protected`），但不包括父类的。
+  - `field.setAccessible(true)`: **“破解咒语”**！解除私有权限的访问限制。
+  - `field.get(obj)` / `field.set(obj, value)`: 在指定对象 `obj` 上获取/设置这个字段的值。
+
+这里的 `getFields()` 和 `getDeclaredFields()` 可以传入参数，表示对应的变量名。
+
+```java
+private int age;
+```
+
+```java
+Class c = Dog.class;
+Field f = c.getDeclaredField("age");
+```
+
+- **`Method`**: 代表类的**方法**。
+  - `getMethods()` / `getDeclaredMethods()`: 同上。
+  - `method.setAccessible(true)`: 同样是“破解咒语”。
+  - `method.invoke(obj, args...)`: 在指定对象 `obj` 上，用指定的参数 `args` **调用**这个方法。
+
+这里的 `getMethods()` 和 `getDeclaredMethods()` 实际上可以传入参数，第一个参数表示方法名，第二个参数表示其参数。例如：
+
+```java
+public String eat(String name) { ... }
+```
+
+那我们可以通过以下方式获取：
+
+```java
+Class c = Dog.class;
+// 也可以通过 Method eat = c.getDeclaredMethod("eat"); 来获取
+Method eat = c.getDeclaredMethod("eat", String.class);
+```
+
+- **`Constructor`**: 代表类的**构造函数**。
+  - `getConstructors()` / `getDeclaredConstructors()`: 同上。
+  - `constructor.setAccessible(true)`: 同样是“破解咒语”。
+  - `constructor.newInstance(args...)`: 通过这个构造函数，用指定的参数 `args` **创建**一个新的实例对象。
+
+这里的 `getConstructors()` 和 `getDeclaredConstructors()` 实际上可以传入参数，表示获取特定方法签名的方法。例如：
+
+```java
+public Dog(String name, int age) { ... }
+```
+
+这样的构造器，我可以通过以下方式获取：
+
+```java
+Class c = Dog.class;
+Constructor con = c.getDeclaredConstructor(String.class, int.class);
+```
+
+---
+
+4. **一个完整的“黑魔法”栗子**
+
+我们来用反射去完全操控一个本来“深藏不露”的 `Person` 对象。
+
+**被操控的类：**
+
+```java
+// Person.java
+public class Person {
+    private String name;
+    public int age;
+
+    public Person(String name, int age) {
+        this.name = name;
+        this.age = age;
+    }
+
+    public void sayHi() {
+        System.out.println("Hello, I am " + name + ", " + age + " years old.");
+    }
+
+    private void whisperSecret() {
+        System.out.println(name + " is whispering a secret... shhh!");
+    }
+}
+```
+
+**使用反射进行操控：**
+
+```java
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+
+public class ReflectionMagic {
+    public static void main(String[] args) throws Exception { // 简化异常处理
+        // 1. 获取 Class 对象
+        Class<?> personClass = Class.forName("Person");
+
+        // 2. 获取构造函数并创建实例
+        Constructor<?> constructor = personClass.getConstructor(String.class, int.class);
+        Object personInstance = constructor.newInstance("张三", 25);
+        System.out.println("原始对象:");
+        ((Person) personInstance).sayHi(); // 正常调用
+
+        System.out.println("\n--- 开始施展反射黑魔法 ---");
+
+        // 3. 访问并修改私有字段 name
+        Field nameField = personClass.getDeclaredField("name");
+        nameField.setAccessible(true); // 破解私有权限
+        nameField.set(personInstance, "小橘"); // 修改名字
+
+        // 4. 访问并修改公有字段 age
+        Field ageField = personClass.getField("age");
+        ageField.set(personInstance, 18);
+
+        // 5. 调用公有方法
+        System.out.println("\n调用公有方法:");
+        Method sayHiMethod = personClass.getMethod("sayHi");
+        sayHiMethod.invoke(personInstance);
+
+        // 6. 调用私有方法
+        System.out.println("\n调用私有方法:");
+        Method whisperMethod = personClass.getDeclaredMethod("whisperSecret");
+        whisperMethod.setAccessible(true); // 破解私有权限
+        whisperMethod.invoke(personInstance);
+    }
+}
+```
+
+---
+
+
+5. **反射是“双刃剑”：优缺点与应用场景**
+
+反射非常强大，但就像“黑魔法”一样，不能滥用。
+
+**优点：**
+
+- **极大的灵活性和动态性**：让程序可以在运行时装配和操作对象，这是所有**框架（Spring, MyBatis...）**的基石。
+
+**缺点：**
+
+- **性能开销大**：反射操作涉及到动态解析，比直接调用慢得多，JVM 难以对其进行优化。
+- **破坏封装性**：`setAccessible(true)` 可以无视 `private` 修饰符，破坏了面向对象的封装原则，让代码变得不安全、不稳定。
+- **类型不安全**：编译器无法检查反射调用的正确性，很多错误（比如方法名写错、参数类型不对）只能在运行时才会发现并抛出异常。
+
+**应用场景：** 你**几乎永远不应该在自己的业务代码中使用反射**。它的主要舞台在于**开发框架**。
+
+- **Spring 的依赖注入(DI)**：`@Autowired` 注解为什么能自动把一个对象赋值给一个 `private` 字段？就是 Spring 框架在背后用反射的 `field.setAccessible(true)` 和 `field.set()` 帮你注入进去的！
+- **动态代理**、**JDBC 加载驱动**、**JSON 序列化/反序列化**等，都离不开反射。
+
+
+
+### 7. Java 中的注解
+
+你之前学习 JUnit 时用到的 `@Test`, `@DisplayName`，以及将来学习 Spring Boot 时会遇到的 `@Autowired`, `@Service` 等，全都是注解。理解了它的原理，你就能明白现代 Java 框架的半壁江山是如何运作的。
+
+---
+
+1. **什么是注解？(The "Why" and "What")**
+
+在解释技术细节前，我们先建立一个直观的认知。
+
+**小橘的比喻 🐾：代码的“便利贴”**
+
+- **你的代码（类、方法、字段）**：就像是一本书里的**内容**。
+- **注解**：就像是你贴在书页上的一张张**便利贴**。
+
+这张便利贴本身**不会改变书的内容**。一个方法不会因为你给它贴了一张 `@Test` 的便利贴，它的执行逻辑就发生任何变化。
+
+**那么便利贴的意义何在？** 在于有**专门的工具**会来**读取**这些便利贴，并根据便利贴上的内容执行特殊的操作！
+
+- **`JUnit` 运行器**这个工具，会翻遍你的项目，专门查找所有贴了 `@Test` 便利贴的方法，然后把它们执行一遍。
+- **`Spring` 框架**这个工具，会查找所有贴了 `@Component` 便利贴的类，然后帮你创建它们的实例并管理起来。
+- **`Java` 编译器**这个工具，会查找贴了 `@Override` 便利贴的方法，检查它是否真的覆盖了父类的方法，如果没覆盖就报错。
+
+**所以，注解的本质是：** 它是一种**元数据 (Metadata)**，即“关于数据的数据”。它为我们的代码（类、方法、字段等）提供了一种附加额外信息的方式，这些信息可以被编译器、注解处理器或是在运行时通过反射来读取和使用。**注解本身什么也不做，是读取它的工具让它变得有意义。**
+
+---
+
+2. **自定义你的“便利贴”：自定义注解**
+
+除了 Java 自带的 `@Override`, `@Deprecated` 等，我们还可以创建自己的注解。
+
+创建一个注解，使用的是 `@interface` 关键字，它看起来像一个接口，但并不是。
+
+```java
+public @interface MyTestAnnotation {
+    // 这里可以定义注解的“属性”
+}
+```
+
+这样我们就定义了一个最简单的注解 `@MyTestAnnotation`。
+
+我们还可以给注解添加**属性**，让它能携带更多信息。注解的属性在定义时看起来像无参数的方法。
+
+```java
+public @interface Check {
+    // 定义一个名为 value 的 String 类型属性
+    String value();
+
+    // 定义一个名为 level 的 int 类型属性，并给一个默认值
+    int level() default 0;
+}
+```
+
+**使用时：**
+
+```java
+@Check(value = "参数不能为空", level = 1)
+public void someMethod(String param) {
+    // ...
+}
+
+// 如果属性名叫 "value"，可以省略不写
+@Check("参数不能为空") 
+public void anotherMethod(String param) {
+    // ...
+}
+
+// 如果所有属性都有默认值，或者没有属性，可以只写注解名
+@MyTestAnnotation
+public void simpleTest() {
+    // ...
+}
+```
+
+---
+
+3. **“便利贴的规则”：元注解 (Meta-Annotations)**
+
+我们自定义的便利贴，它“能贴在哪里？”、“能保留到什么时候？”，这些都需要规则来约束。**元注解**就是用来**注解“注解”**的注解，它负责定义我们自定义注解的行为。
+
+最核心的元注解有四个：
+
+**1. `@Target`：规定注解能用在什么地方。** 就像规定便利贴“只能贴在书的封面上”或“只能贴在某一页上”。
+
+- `ElementType.TYPE`：类、接口、枚举。
+- `ElementType.METHOD`：方法。
+- `ElementType.FIELD`：成员变量。
+- `ElementType.PARAMETER`: 方法参数。
+- ... 等等，可以指定多个。
+
+**2. `@Retention`：规定注解的“生命周期”。** 这是**最重要**的元注解，它决定了注解的信息能保留到哪个阶段。
+
+- `RetentionPolicy.SOURCE`：**源码阶段**。注解只存在于 `.java` 文件中，编译器编译成 `.class` 文件后，注解信息就被丢弃了。(`@Override`, `@SuppressWarnings` 就是这种)
+- `RetentionPolicy.CLASS`：**编译阶段**。注解信息会保留在 `.class` 文件中，但 JVM 在运行时会忽略它。（这是默认值）
+- `RetentionPolicy.RUNTIME`：**运行阶段**。**这是最有用的！** 注解信息会一直保留到 JVM 运行时，这样我们就可以在程序运行时，通过**反射**来读取和使用这些注解信息。**所有框架基本都用这个策略。**
+
+**3. `@Documented`** 一个标记注解，表示在用 `javadoc` 工具生成文档时，需要把这个注解也显示出来。
+
+**4. `@Inherited`** 如果一个父类被这个元注解标记的注解所注解，那么它的所有子类将自动“继承”这个注解。
+
+**一个完整的自定义注解栗子：** 我们来定义一个功能测试注解，它能用在方法上，并且能在运行时被读取。
+
+```java
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
+// 1. @Target: 规定这个注解只能用在方法上
+@Target(ElementType.METHOD)
+// 2. @Retention: 规定这个注解的生命周期到运行时
+@Retention(RetentionPolicy.RUNTIME)
+public @interface MyFunctionTest {
+    // 我们可以给它定义一些属性
+    String author() default "小橘";
+    String description();
+}
+```
+---
+4. **“读取便利贴”：解析注解 (Annotation Processing)**
+
+我们贴好了便利贴，现在需要一个“便利贴读取器”来让它生效。在运行时，这个读取器就是我们之前学过的**反射 (Reflection)**！
+
+**场景**：假设我们有一个类，里面有些方法被我们的 `@MyFunctionTest` 注解标记了，我们写一个程序来找出这些被标记的方法，并“执行”它们。
+
+**被测试的类：**
+
+```java
+public class MyService {
+
+    @MyFunctionTest(description = "这是一个需要测试的核心业务方法")
+    public void coreLogic() {
+        System.out.println("核心业务方法正在执行...");
+    }
+    
+    public void normalMethod() {
+        System.out.println("这是一个普通方法。");
+    }
+}
+```
+
+**注解解析器 (我们的“工具”)：**
+
+```java
+import java.lang.reflect.Method;
+
+public class MyTestRunner {
+    public static void main(String[] args) throws Exception {
+        // 1. 获取要解析的类的 Class 对象
+        Class<?> serviceClass = Class.forName("MyService");
+        
+        // 2. 创建一个实例
+        Object serviceInstance = serviceClass.getConstructor().newInstance();
+
+        // 3. 遍历这个类所有已声明的方法
+        for (Method method : serviceClass.getDeclaredMethods()) {
+            
+            // 4. 判断这个方法上是否贴了 @MyFunctionTest 的“便利贴”
+            if (method.isAnnotationPresent(MyFunctionTest.class)) {
+                
+                // 5. 如果贴了，就把它读出来
+                MyFunctionTest annotation = method.getAnnotation(MyFunctionTest.class);
+                
+                System.out.println("===== 发现一个被 @MyFunctionTest 标记的方法！=====");
+                System.out.println("方法名: " + method.getName());
+                System.out.println("注解描述: " + annotation.description());
+                System.out.println("注解作者: " + annotation.author());
+                
+                // 6. 甚至可以动态调用这个方法
+                System.out.println(">>> 准备通过反射执行该方法...");
+                method.invoke(serviceInstance);
+                System.out.println("<<< 方法执行完毕。\n");
+            }
+        }
+    }
+}
+```
+
+这个 `MyTestRunner` 就模拟了 `JUnit` 的核心工作原理：**利用反射查找特定注解，然后执行相应的操作。**
+
+
+
+### 8. 动态代理
+
+**动态代理**是 Spring AOP (面向切面编程) 等框架的绝对核心。理解了它，你就能明白为什么 Spring 可以在不修改你任何一行代码的情况下，为你添加事务、日志、安全校验等酷炫功能。
+
+---
+
+1. **代理模式：一切的起点**
+
+在了解“动态”代理前，我们先要明白什么是**代理模式 (Proxy Pattern)**。
+
+**小橘的比喻 🐾：大明星和他的经纪人**
+
+- **被代理对象 (Real Object)**：一位日程繁忙的大明星。他的核心工作是唱歌、演戏。
+- **代理对象 (Proxy Object)**：这位大明星的**经纪人**。
+- **业务场景**：现在有一个商演活动想请这位大明星。
+
+**如果没有经纪人**，大明星需要亲自处理所有事情：谈合同、确认出场费、安排行程、雇佣保镖... 这会让他分心，无法专注于核心的表演工作。
+
+**有了经纪人之后**：
+
+1. 商演方直接联系**经纪人**（访问代理对象）。
+2. **经纪人**负责处理所有非核心的“附加”业务：
+   - **前置操作**：谈合同、收定金、确认安全措施。
+   - **调用核心业务**：安排大明星到场表演（调用真实对象的方法）。
+   - **后置操作**：收尾款、处理媒体关系。
+
+在这个模式中，**代理（经纪人）** 控制了对 **真实对象（大明星）** 的访问，并且可以在真实业务执行**前后**“做手脚”，添加额外的逻辑。
+
+---
+
+2. **从静态代理到动态代理**
+
+- **静态代理**：就是我们**手动**为大明星写一个经纪人类。如果有一个 `UserService` 接口，我们就得手动写一个 `UserServiceProxy` 类。如果又来一个 `ProductService` 接口，我们又得写一个 `ProductServiceProxy` 类。非常繁琐，每加一个接口就要写一个代理类，难以维护。
+- **动态代理**：这是 Java 的魔法所在！我们不再需要手动为每个接口写代理类。我们只需要写一个**通用的“经纪人逻辑”**，然后告诉 Java：“请你在**程序运行时**，根据 `UserService` 这个接口，**动态地**帮我凭空创造一个代理对象出来，让它执行我写的这段通用逻辑。”
+
+**“动态”**的核心在于：这个代理类不是你写在 `.java` 文件里的，而是 **JVM 在运行时，根据你的要求，在内存中动态生成**的！
+
+---
+
+3. **Java 动态代理的核心组件**
+
+实现 Java 动态代理（也叫 JDK 动态代理），只需要两个核心组件：
+
+A. `java.lang.reflect.Proxy`
+
+这是一个工具类，像一个“代理制造工厂”。我们主要用它的静态方法 `newProxyInstance()` 来创建代理对象。
+
+```java
+public static Object newProxyInstance(
+    ClassLoader loader,         // 1. 类加载器
+    Class<?>[] interfaces,      // 2. 要实现的接口数组
+    InvocationHandler handler  // 3. 调用处理器 (经纪人逻辑)
+);
+```
+
+1. `loader`: **类加载器**。用来加载动态生成的代理类，我们通常直接用被代理类的加载器就行。
+2. `interfaces`: **代理对象需要实现的接口列表**。这是 JDK 动态代理的关键，它**必须基于接口**。你告诉它要实现哪些接口，它生成的代理对象就“看起来”像这些接口的实现类。
+3. `handler`: **调用处理器**。这才是代理的**灵魂**！它是那个“经纪人”的具体实现，我们所有的附加逻辑（比如打印日志、开启事务）都写在它里面。
+
+B. `java.lang.reflect.InvocationHandler`
+
+这是一个接口，里面只有一个 `invoke` 方法。我们的“经纪人逻辑”就实现在这个方法里。
+
+```java
+public Object invoke(Object proxy, Method method, Object[] args) throws Throwable;
+```
+
+这个 `invoke` 方法非常神奇，**任何**对代理对象的方法调用，都会被转发到这里来统一处理。
+
+- `proxy`: 动态生成的代理对象本身（很少用到）。
+- `method`: 当前被调用的**方法**对象（比如是 `addUser` 方法还是 `deleteUser` 方法）。
+- `args`: 调用该方法时传入的**参数**数组。
+
+---
+
+4. **一个完整的实战栗子：为用户服务添加日志**
+
+让我们一步步实现一个动态代理，来为我们的 `UserService` 在执行前后自动打印日志。
+
+**第1步：定义接口**
+
+```java
+// UserService.java (我们的“大明星”需要遵守的合约)
+public interface UserService {
+    void addUser(String username);
+    void deleteUser(String username);
+}
+```
+
+**第2步：创建真实实现类**
+
+```java
+// UserServiceImpl.java (大明星本人，只负责核心业务)
+public class UserServiceImpl implements UserService {
+    @Override
+    public void addUser(String username) {
+        System.out.println("--> 核心业务：数据库中添加用户: " + username);
+    }
+    @Override
+    public void deleteUser(String username) {
+        System.out.println("--> 核心业务：数据库中删除用户: " + username);
+    }
+}
+```
+
+**第3步：创建调用处理器 (我们的“经纪人”)**
+
+```java
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Method;
+
+// LogInvocationHandler.java
+public class LogInvocationHandler implements InvocationHandler {
+    
+    // 经纪人必须知道他代理的是哪个大明星
+    private final Object realObject;
+
+    public LogInvocationHandler(Object realObject) {
+        this.realObject = realObject;
+    }
+
+    // 所有对代理对象的方法调用，都会进入这个 invoke 方法
+    @Override
+    public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+        System.out.println("【日志】 [前置操作] 准备执行方法: " + method.getName());
+        
+        // 调用真实对象的核心方法
+        Object result = method.invoke(realObject, args);
+        
+        System.out.println("【日志】 [后置操作] 方法 " + method.getName() + " 执行完毕。");
+        
+        // 返回真实方法的执行结果
+        return result;
+    }
+}
+```
+
+**第4步：在客户端中使用代理**
+
+```java
+import java.lang.reflect.Proxy;
+
+// Main.java
+public class DynamicProxyClient {
+    public static void main(String[] args) {
+        // 1. 创建真实对象（大明星）
+        UserService realUserService = new UserServiceImpl();
+
+        // 2. 创建调用处理器（经纪人），并告诉他要代理谁
+        InvocationHandler handler = new LogInvocationHandler(realUserService);
+
+        // 3. 使用 Proxy 工厂，动态生成代理对象
+        UserService proxyUserService = (UserService) Proxy.newProxyInstance(
+                realUserService.getClass().getClassLoader(), // 使用真实对象的类加载器
+                realUserService.getClass().getInterfaces(), // 告诉代理要实现真实对象的所有接口
+                handler // 告诉代理，所有的方法调用都交给 handler 处理
+        );
+
+        // 4. 通过代理对象调用方法！
+        System.out.println("--- 调用 addUser ---");
+        proxyUserService.addUser("小橘");
+        
+        System.out.println("\n--- 调用 deleteUser ---");
+        proxyUserService.deleteUser("琪露诺");
+    }
+}
+```
+
+**输出结果：**
+
+```
+--- 调用 addUser ---
+【日志】 [前置操作] 准备执行方法: addUser
+--> 核心业务：数据库中添加用户: 小橘
+【日志】 [后置操作] 方法 addUser 执行完毕。
+
+--- 调用 deleteUser ---
+【日志】 [前置操作] 准备执行方法: deleteUser
+--> 核心业务：数据库中删除用户: 琪露诺
+【日志】 [后置操作] 方法 deleteUser 执行完毕。
+```
+
+你看，我们没有修改一行 `UserServiceImpl` 的代码，就成功地为它的所有方法都加上了日志功能！这就是动态代理的威力。
+
+---
+
+5. **JDK 动态代理的局限与 CGLIB**
+
+- **局限**：JDK 自带的动态代理，**必须基于接口**。也就是说，被代理的类必须实现一个或多个接口。如果一个类没有实现任何接口，JDK 动态代理就对它无能为力了。
+- **补充**：为了解决这个问题，另一个第三方库 **CGLIB** 应运而生。它不要求基于接口，而是通过在运行时动态地**创建被代理类的一个子类**，并重写其方法来实现代理。这正是 **Spring AOP 的秘密武器**！当你需要代理一个没有实现接口的类时，Spring 会自动为你切换到 CGLIB 来创建代理。
 
 
 
@@ -6188,9 +7678,5 @@ System.out.println(fruits); // 输出: [Apple, Cherry]
 
 
 
-
-
-
-
-## Redis 篇
+##                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           Redis 篇
 
