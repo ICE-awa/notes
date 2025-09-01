@@ -7280,6 +7280,12 @@ class MethodSourceTest {
 
 - **`Arguments.of(...)`**: 这是一个辅助方法，用于将多个参数打包成一组。
 
+---
+
+对于 SpringBoot 中的 Junit 测试，我们需要加入 @SpringBootTest 注解，这样能够当测试方法运行时，自动启动 springboot 项目
+
+
+
 
 
 ### 6. Java 中的反射
@@ -8770,9 +8776,620 @@ public class MyController {
 
 
 
+### 8. JDBC
+
+1. **什么是 JDBC？(The "Why")**
+
+**小橘的比喻 🐾：开车与驾照**
+
+- **各种数据库 (MySQL, Oracle, PostgreSQL...)**：就像是不同品牌的汽车（丰田、本田、宝马...）。它们内部的引擎构造、操作细节都略有不同。
+- **Java 程序**：就是想开车的“司机”。
+- **JDBC API (`java.sql.\*` 包)**：就是一本**“通用驾照考试手册”**。它定义了一套标准的驾驶动作规范（接口），比如 `Connection` (点火启动)、`Statement` (挂挡踩油门)、`ResultSet` (看仪表盘)。所有司机都按这个手册来学。
+- **数据库驱动 (Driver)**：就是**特定品牌汽车的“操作手册”**。比如 `mysql-connector-j.jar` 就是“丰田车操作手册”。它负责把“通用驾驶动作”翻译成丰田车能听懂的“引擎指令”。
+
+**所以，JDBC (Java Database Connectivity) 的本质是**：Java 官方提供的一套标准的 **API (应用程序编程接口)**。它定义了一系列**接口**，让 Java 程序能够以一种**统一**的方式，与各种不同的关系型数据库进行通信，而不用关心具体数据库的底层实现细节。我们只需要面向 JDBC 接口编程，再引入对应数据库的“操作手册”（驱动），就能连接任意数据库了。
+
+2. **准备工作：添加 Maven 依赖**
+
+既然我们要开“丰田车”（MySQL），就必须先把它的“操作手册”（驱动）放到我们的项目里。对于 Maven 项目，我们只需要在 `pom.xml` 文件中添加 `mysql-connector-j` 的依赖即可。
+
+```xml
+<dependencies>
+    <dependency>
+        <groupId>com.mysql</groupId>
+        <artifactId>mysql-connector-j</artifactId>
+        <version>8.0.33</version> </dependency>
+</dependencies>
+```
+
+3. **JDBC 操作的“六脉神剑”**
+
+使用 JDBC 连接并操作数据库，通常遵循一个固定的、经典的六步流程：
+
+1. **加载驱动** (Load the Driver) - (在现代JDBC中，这一步通常可以省略)
+2. **建立连接** (Establish the Connection)
+3. **创建语句对象** (Create a Statement Object)
+4. **执行 SQL** (Execute the SQL)
+5. **处理结果集** (Process the ResultSet)
+6. **关闭资源** (Close Resources) - **极其重要！**
+
+下面我们通过一个完整的例子，来详细拆解这六个步骤。
+
+---
+
+4. **一个完整的 JDBC 查询栗子**
+
+**目标**：查询 `users` 表中所有 `age > 20` 的用户。
+
+```java
+import java.sql.*;
+
+public class BasicJdbcExample {
+
+    // 1. 定义数据库连接信息
+    private static final String JDBC_URL = "jdbc:mysql://localhost:3306/my_project_db?useSSL=false&serverTimezone=UTC";
+    private static final String USER = "your_username";
+    private static final String PASSWORD = "your_password";
+
+    public static void main(String[] args) {
+
+        // 现代 Java 推荐使用 try-with-resources 语句来自动管理资源
+        // 稍后会详细解释它的好处！
+        try (
+            // 2. 建立连接
+            Connection conn = DriverManager.getConnection(JDBC_URL, USER, PASSWORD);
+            // 3. 创建语句对象
+            Statement stmt = conn.createStatement();
+            // 4. 执行 SQL 查询
+            ResultSet rs = stmt.executeQuery("SELECT id, username, email FROM users WHERE age > 20");
+        ) {
+            System.out.println("成功连接到数据库并执行查询！");
+
+            // 5. 处理结果集
+            // rs.next() 将“游标”移动到下一行，如果没有下一行了，就返回 false
+            while (rs.next()) {
+                // 通过列名获取数据，这是最推荐的方式
+                int id = rs.getInt("id");
+                String username = rs.getString("username");
+                String email = rs.getString("email");
+
+                // 也可以通过列的索引获取 (索引从1开始)
+                // String username = rs.getString(2);
+                
+                System.out.printf("用户ID: %d, 用户名: %s, 邮箱: %s\n", id, username, email);
+            }
+
+        } catch (SQLException e) {
+            System.err.println("数据库操作失败！");
+            e.printStackTrace();
+        }
+        // 6. 关闭资源 - try-with-resources 会在这里自动帮我们完成 conn, stmt, rs 的关闭！
+    }
+}
+```
+
+**详细拆解：**
+
+- **`Connection`**: 代表了你的 Java 程序和数据库之间的一个物理连接。它是所有后续操作的基础。
+- **`Statement`**: 用于执行**静态 SQL 语句**的对象。它就像一个“SQL 语句的发送器”。
+- **`ResultSet`**: 代表 `SELECT` 查询返回的结果集。你可以把它想象成一个指向查询结果表格的**“游标”或“迭代器”**。你只能一行一行地向下读取，不能回头。
+- **`executeQuery()` vs `executeUpdate()`**:
+  - `executeQuery()`: 用于执行**查询语句 (DQL)**，比如 `SELECT`。它返回一个 `ResultSet` 对象。
+  - `executeUpdate()`: 用于执行**更新语句 (DML)**，比如 `INSERT`, `UPDATE`, `DELETE`。它返回一个 `int`，表示受影响的行数。
+
+6. **关闭资源 - `try-with-resources` 的优雅**
+
+`Connection`, `Statement`, `ResultSet` 都是非常宝贵的资源。如果用完不关闭，就会发生“资源泄漏”，最终可能导致数据库连接池耗尽，程序崩溃。
+
+在 Java 7 之前，我们需要写很多层嵌套的 `finally` 块来确保资源被关闭，代码非常丑陋。
+
+Java 7 引入的 **`try-with-resources`** 语法是我们的“救世主”。
+
+```java
+try (ResourceType res1 = ...; ResourceType res2 = ...) {
+    // ... 使用资源 ...
+} catch (...) {
+    // ... 异常处理 ...
+}
+```
+
+**工作原理**：只要一个类实现了 `AutoCloseable` 接口（`Connection`, `Statement`, `ResultSet` 都实现了），你就可以把它放在 `try()` 的括号里。**无论 `try` 块是正常结束还是因异常退出，Java 都会保证在最后自动调用这些资源的 `.close()` 方法**，而且是按照与创建时相反的顺序关闭（先关 `rs`，再关 `stmt`，最后关 `conn`）。
+
+------
+
+在今天的例子中，我们的 SQL 语句是直接用字符串拼接的：`"SELECT ..."`。这样做有两个很大的问题：
+
+1. **SQL 注入 (SQL Injection) 漏洞**：如果查询条件是动态的（比如来自用户的输入），直接拼接字符串会带来严重的安全风险。
+2. **性能问题**：数据库需要为每一个内容稍有不同的 SQL 语句都进行一次完整的“解析、编译、优化”过程，效率低下。
+
+要解决这两个问题，我们就需要请出 JDBC 中更强大、更安全的“大将”——`PreparedStatement`。
+
+---
+
+1. **什么是 SQL 注入？ (一个危险的黑客故事)**
+
+在介绍我们的“英雄” `PreparedStatement` 之前，我们必须先了解它要打败的“大反派”——**SQL 注入 (SQL Injection)**。
+
+假设我们有一个登录验证的业务，代码是这样写的：
+
+```java
+// !!! 极其危险的错误示范 !!!
+String username = userInput.getText(); // 从用户输入的文本框获取用户名
+String password = userInput.getPassword(); // 从用户输入的密码框获取密码
+
+String sql = "SELECT * FROM users WHERE username = '" + username + 
+             "' AND password = '" + password + "'";
+
+Statement stmt = conn.createStatement();
+ResultSet rs = stmt.executeQuery(sql); // 直接执行拼接好的 SQL
+
+if (rs.next()) {
+    System.out.println("登录成功！");
+} else {
+    System.out.println("用户名或密码错误。");
+}
+```
+
+这段代码看起来似乎没问题。但如果一个黑客来了，他会这样做：
+
+- 在**用户名**输入框里，他输入：`admin' -- `  (admin, 单引号, 空格, 双减号, 空格)
+- **密码**输入框里，他随便输入什么，比如 `123456`。
+
+那么，我们拼接出来的 SQL 语句就变成了：
+
+```sql
+SELECT * FROM users WHERE username = 'admin' -- ' AND password = '123456'
+```
+
+在 SQL 语法中，`--` 是**注释符**，它会把它后面的所有内容都变成注释！所以，数据库实际执行的 SQL 就等价于：
+
+```sql
+SELECT * FROM users WHERE username = 'admin'
+```
+
+`password` 的验证被完全绕过了！黑客不需要知道任何密码，就成功地以 `admin` 的身份登录了系统！这就是 SQL 注入，一种极其常见且危害巨大的网络攻击手段。
+
+2. **`PreparedStatement`：安全与性能的守护者**
+
+`PreparedStatement` 是 `Statement` 的子接口，它提供了全新的、更安全的方式来执行 SQL。
+
+**它的核心思想是：将 SQL 的“骨架”和“数据”彻底分离。**
+
+**小橘的比喻 🐾：填空题试卷**
+
+- **`Statement`**: 就像一个**开放式问答题**。你把整个问题（SQL语句）和你的答案（数据）混在一起写上去。这就给了“坏学生”（黑客）篡改题干（SQL结构）的机会。
+- **`PreparedStatement`**: 就像一张**标准化的填空题试卷**。
+  1. 试卷的题目（SQL骨架）是预先印刷好的、**不可更改的**，比如 `姓名: ___, 班级: ___`。这个过程叫做**预编译 (Pre-compilation)**。数据库拿到这张试卷模板，会先分析好它的语法结构并缓存起来。
+  2. 你只需要把你的答案（数据），通过**安全的API**，一个一个地填到对应的**空格 (`?`)** 里。
+  3. 你填进去的任何内容，都会被数据库**严格地当作“纯文本数据”**来处理，**绝对不会**被当作 SQL 语法的一部分来执行。
+
+**这样，就从根本上杜绝了 SQL 注入的可能。** 黑客输入的 `' -- '` 也会被当作一个普通的、需要去数据库里匹配的用户名，而不是注释符。
+
+**性能优势**： 由于 SQL “骨架”被预编译并缓存了，当你需要多次执行结构相同、只是数据不同的 SQL 时（比如批量插入1000条用户数据），数据库不需要每次都重新解析和编译 SQL 语句，只需要把新的数据填进去直接执行就行了，**性能会大大提升**。
+
+---
+
+3. **如何使用 `PreparedStatement`**
+
+使用 `PreparedStatement` 的流程和之前类似，但在第3步和第4步有所不同。
+
+**一个完整的、安全的查询栗子：**
+
+```java
+import java.sql.*;
+
+public class PreparedStatementExample {
+
+    private static final String JDBC_URL = "jdbc:mysql://localhost:3306/my_project_db?useSSL=false&serverTimezone=UTC";
+    private static final String USER = "your_username";
+    private static final String PASSWORD = "your_password";
+
+    public static void main(String[] args) {
+        
+        // 目标：安全地查询用户名为 "小橘"，且年龄大于 16 的用户
+        String targetUsername = "小橘";
+        int targetAge = 16;
+        
+        // 1. 定义带有占位符 (?) 的 SQL 模板
+        String sql = "SELECT id, username, email FROM users WHERE username = ? AND age > ?";
+        
+        try (
+            Connection conn = DriverManager.getConnection(JDBC_URL, USER, PASSWORD);
+            // 2. 创建 PreparedStatement，传入 SQL 模板
+            PreparedStatement pstmt = conn.prepareStatement(sql);
+        ) {
+            // 3. 绑定参数：用具体的值，替换 SQL 模板中的占位符 (?)
+            //    参数索引从 1 开始！
+            pstmt.setString(1, targetUsername); // 将第1个 ? 设置为 String 类型的 targetUsername
+            pstmt.setInt(2, targetAge);       // 将第2个 ? 设置为 int 类型的 targetAge
+
+            // 4. 执行查询，executeQuery() 方法不需要再传入 sql 语句了！
+            try (ResultSet rs = pstmt.executeQuery()) {
+                
+                // 5. 处理结果集
+                while (rs.next()) {
+                    System.out.printf("用户ID: %d, 用户名: %s, 邮箱: %s\n",
+                            rs.getInt("id"), rs.getString("username"), rs.getString("email"));
+                }
+            }
+            
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+}
+```
+
+**`PreparedStatement` 的 `setXXX` 方法**： 你需要根据参数的实际类型，调用对应的 `set` 方法，比如 `setString()`, `setInt()`, `setDouble()`, `setDate()` 等。第一个参数是占位符 `?` 的索引（从1开始），第二个参数是你要设置的值。
+
+**最终结论**：在任何实际的项目开发中，你应该**永远优先、并且几乎只使用 `PreparedStatement`**，而将 `Statement` 视为一个过时的、仅供了解历史的工具。
+
+
+
+### 9. MyBatis
+
+我们刚刚学习了 JDBC，你一定感受到了它的繁琐：手动获取连接、创建 `PreparedStatement`、一个一个地设置参数 `setXXX()`、再手动遍历 `ResultSet` 把结果封装成 Java 对象、最后还要在 `finally` 块里小心翼翼地关闭各种资源...
+
+如果有大量的数据库操作，写 JDBC 会让人非常痛苦。MyBatis 的诞生，就是为了把我们从这些重复、繁琐的“体力劳动”中解放出来！
+
+---
+
+1. **什么是 MyBatis？(The "Why")**
+
+**小橘的比喻 🐾：从“手动翻译”到“AI 同声传译”**
+
+- **使用 JDBC**：就像一个**手动翻译官**。当你的业务逻辑（Service层）需要数据时，你必须手动：
+
+  1. 把你的业务需求（比如 `getUserById(1)`）翻译成 SQL 语句 (`"SELECT * FROM users WHERE id = ?"`）。
+  2. 准备好交通工具 (`Connection`, `PreparedStatement`)。
+  3. 把参数（`1`）打包好送过去 (`pstmt.setInt(1, id)`)。
+  4. 拿到对方返回的一大篇原始报文 (`ResultSet`)。
+  5. 再一字一句地把报文翻译、组装成一个 Java 的 `User` 对象。
+  6. 最后还要收拾好桌子（关闭所有资源）。
+
+- **使用 MyBatis**：就像一个**高度智能的 AI 同声传译机**。你只需要做两件事：
+
+  1. **配置**：提前告诉它，当我说“`getUserById`”的时候，你对应的 SQL 稿子是“`SELECT * FROM users WHERE id = #{id}`”。
+  2. **调用**：在你的业务代码里，像调用一个普通的 Java 方法一样，直接调用 `userMapper.getUserById(1)`。
+
+  然后，MyBatis 这个“AI同传机”就会在底层自动帮你完成**所有**繁琐的 JDBC 操作：获取连接、创建 `PreparedStatement`、设置参数、执行 SQL、遍历 `ResultSet`、封装成 `User` 对象、关闭资源... 最终直接把一个完美的 `User` 对象返回给你。
+
+**所以，MyBatis 是一个优秀的持久层框架 (Persistence Framework)。** 它最大的特点，也是最核心的思想，就是让你**从繁琐的 JDBC 代码中解放出来**。你只需要专注于编写 **SQL 语句**，然后通过简单的配置，将这些 SQL **映射 (map)** 到你的 Java **接口方法**上。MyBatis 会在底层自动帮你处理所有 JDBC 的脏活累活。
+
+它是一种“半自动”的 **ORM (Object-Relational Mapping, 对象关系映射)** 框架。
+
+---
+
+2. **MyBatis 的两大核心组件**
+
+MyBatis 的工作主要围绕两个核心文件展开：
+
+1. **Mapper 接口 (Java Interface)**
+   - 这是一个普通的 Java **接口**，不是实现类。
+   - 你在这里定义所有和数据库交互的方法签名，比如 `User findById(int id);`, `void insertUser(User user);`。
+   - 这一层是你 Service 业务逻辑层与之打交道的“门面”。
+2. **Mapper XML 映射文件 (XML File)**
+   - 这是存放你**真实 SQL 语句**的地方。
+   - 这个 XML 文件会和上面的 Mapper 接口绑定。
+   - 你在 XML 里面，为接口中的每一个方法，都提供一个具体的 SQL 实现。
+
+---
+
+3. **在 Spring Boot 中实战 MyBatis (Step-by-Step)**
+
+下面我们来看在一个标准的 Spring Boot 项目中，如何使用 MyBatis 从零开始查询一个用户。
+
+**第1步：添加 Maven 依赖**
+
+在 `pom.xml` 中，我们需要两个“大礼包”：MyBatis 的 Spring Boot Starter 和 MySQL 驱动。
+
+```xml
+<dependencies>
+    <dependency>
+        <groupId>org.mybatis.spring.boot</groupId>
+        <artifactId>mybatis-spring-boot-starter</artifactId>
+        <version>3.0.3</version> </dependency>
+
+    <dependency>
+        <groupId>com.mysql</groupId>
+        <artifactId>mysql-connector-j</artifactId>
+        <scope>runtime</scope>
+    </dependency>
+    
+    </dependencies>
+```
+
+**第2步：配置数据源**
+
+在 `src/main/resources/application.properties` 文件中，配置数据库连接信息。
+
+```properties
+spring.datasource.url=jdbc:mysql://localhost:3306/my_project_db?useSSL=false
+spring.datasource.username=your_username
+spring.datasource.password=your_password
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+```
+
+**第3步：创建实体类 (Entity/POJO)**
+
+一个简单的 Java 类，用来承载从数据库查询出来的数据。
+
+```java
+// User.java
+public class User {
+    private Integer id;
+    private String username;
+    private String email;
+    // ... 省略构造函数、getter/setter、toString() ...
+}
+```
+
+**第4步：创建 Mapper 接口**
+
+```java
+// UserMapper.java
+import org.apache.ibatis.annotations.Mapper;
+
+@Mapper // <-- 关键注解！告诉 Spring Boot 这是一个 MyBatis 的 Mapper 接口
+public interface UserMapper {
+    // 我们在这里定义一个方法
+    User findById(Integer id);
+}
+```
+
+`@Mapper` 注解非常重要，Spring Boot 会扫描到它，并为它创建一个动态代理的实现类，然后放入 IoC 容器中。
+
+**第5步：编写 Mapper XML 映射文件**
+
+在 `src/main/resources/` 目录下，创建一个新目录叫 `mappers`，然后在里面创建一个 XML 文件。
+
+```
+src/main/resources/mappers/UserMapper.xml
+```
+
+```xml
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.demo.mapper.UserMapper">
+    
+    <select id="findById" resultType="com.example.demo.entity.User">
+        SELECT * FROM users WHERE id = #{id}
+    </select>
+    
+</mapper>
+```
+
+- **`#{id}`**: 这是 MyBatis 的参数占位符。MyBatis 会自动创建一个 `PreparedStatement`，并把传入的 `id` 参数安全地设置进去，**可以有效防止 SQL 注入**。
+
+**第6步：告诉 MyBatis 去哪里找 XML 文件**
+
+再次回到 `application.properties` 文件，添加一行配置：
+
+```properties
+# 告诉 MyBatis，我们的 XML 映射文件都在 resources/mappers/ 目录下
+mybatis.mapper-locations=classpath:mappers/*.xml
+```
+
+**第7步：在 Service 层调用 Mapper**
+
+现在，所有的准备工作都完成了！我们可以在 Service 层像使用其他 Bean 一样，直接注入 `UserMapper` 并调用它的方法。
+
+```java
+// UserService.java
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+@Service
+public class UserService {
+    
+    private final UserMapper userMapper;
+
+    @Autowired
+    public UserService(UserMapper userMapper) {
+        this.userMapper = userMapper;
+    }
+
+    public User getUserInfo(Integer id) {
+        // 直接调用接口方法，就像调用一个普通的 Java 方法一样！
+        return userMapper.findById(id);
+    }
+}
+```
+
+当你的 `UserService` 调用 `userMapper.findById(1)` 时，Spring Boot 和 MyBatis 的整合魔法就开始了：`@Mapper` -> `UserMapper` 接口 -> `UserMapper.xml` 文件 -> 找到 `id="findById"` 的 `<select>` 标签 -> 执行里面的 SQL -> 将结果自动封装成 `User` 对象返回。
+
+最终，一个完整的 `User` 对象就到了你的手上，而你一行 JDBC 代码都没写！
+
+---
+
+**总结**
+
+**优点**：
+
+- **SQL 自由**：你对 SQL 有 100% 的控制权，可以写出非常复杂和优化的查询。
+- **学习成本低**：只要你熟悉 SQL，MyBatis 本身的概念非常少，上手很快。
+- **灵活性高**：SQL 写在 XML 里，与 Java 代码解耦，方便修改和管理。
+
+**缺点**：
+
+- **SQL 需要手写**：对于简单的单表增删改查，也需要手写 SQL，代码量比全自动的 ORM 框架（如 JPA）要多。
+- **数据库移植性差**：因为 SQL 是手写的，如果你的项目要从 MySQL 迁移到 Oracle，很多 SQL 语句可能都需要修改。
+
+---
+
+我们来学习 MyBatis 的另一种更简洁、更现代的玩法——**注解式映射**！(＾▽＾)و
+
+我们上一讲学习了 MyBatis 最经典、最强大的 XML 映射方式，它把 SQL 和 Java 代码完全分离开。但 MyBatis 的设计者们也考虑到，对于一些简单的 SQL 操作，写一个独立的 XML 文件可能有点“小题大做”。
+
+因此，他们提供了一套**注解，让你能够直接在 Mapper 接口的方法上写 SQL**！这种方式对于实现简单的增删改查 (CRUD) 操作来说，非常方便和直观。
+
+今天我们就来学习如何使用 `@Insert`, `@Select`, `@Update`, `@Delete` 这四大金刚，来完成所有基本的 CRUD 操作。
+
+---
+
+1. **准备工作**
+
+我们的准备工作和上一讲基本一样：
+
+- **依赖**: `mybatis-spring-boot-starter` 和 `mysql-connector-j`。
+- **`application.properties` 配置**: 数据库连接信息。
+- **`User` 实体类**: 一个标准的 POJO。
+- **`UserMapper` 接口**: 标记了 `@Mapper` 注解。
+
+不同的是，这次我们**不需要**创建 `UserMapper.xml` 文件，也不需要在 `application.properties` 中配置 `mybatis.mapper-locations` 了！
+
+---
+
+2. **CRUD 四大注解实战**
+
+我们会直接在 `UserMapper` 接口中完成所有 SQL 的编写。
+
+A. **`SELECT` (查 - Read)**
+
+使用 `@Select` 注解，它的值就是你要执行的查询 SQL 语句。
+
+```java
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Select;
+import java.util.List;
+
+@Mapper
+public interface UserMapper {
+
+    /**
+     * 根据 ID 查询用户
+     * MyBatis 会将方法参数 id，自动匹配到 SQL 中的 #{id}
+     * @param id 用户ID
+     * @return 用户对象
+     */
+    @Select("SELECT * FROM users WHERE id = #{id}")
+    User findById(Integer id);
+
+    /**
+     * 查询所有用户
+     * @return 用户列表
+     */
+    @Select("SELECT * FROM users")
+    List<User> findAll();
+}
+```
+
+- **`#{...}`**: 占位符的用法和 XML 中完全一样，它可以安全地传递参数，防止 SQL 注入。MyBatis 会自动将方法参数与占位符进行匹配。
+
+B. **`INSERT` (增 - Create)**
+
+使用 `@Insert` 注解。一个常见的需求是：插入数据后，我希望得到数据库自动生成的那个主键ID。我们可以用 `@Options` 注解来配合实现。
+
+```java
+import org.apache.ibatis.annotations.Insert;
+import org.apache.ibatis.annotations.Options;
+
+@Mapper
+public interface UserMapper {
+    
+    // ... findById 和 findAll 方法 ...
+
+    /**
+     * 插入一个新用户
+     * #{username} 和 #{email} 会自动匹配 user 对象的 getUsername() 和 getEmail() 方法
+     * @param user 用户对象
+     * @return 受影响的行数
+     */
+    @Insert("INSERT INTO users(username, email, age) VALUES(#{username}, #{email}, #{age})")
+    @Options(useGeneratedKeys = true, keyProperty = "id")
+    int insert(User user);
+}
+```
+
+- **`@Options(useGeneratedKeys = true, keyProperty = "id")`**:
+  - `useGeneratedKeys = true`: 告诉 MyBatis，我们需要数据库返回自动生成的主键。
+  - `keyProperty = "id"`: 告诉 MyBatis，请把返回的主键值，设置到我们传入的 `user` 对象的 `id` 属性上。
+  - **效果**：当你调用完 `insert(myUser)` 方法后，`myUser` 对象的 `id` 字段就会被自动赋上数据库生成的值！非常方便。
+
+C. **`UPDATE` (改 - Update)**
+
+使用 `@Update` 注解。
+
+```java
+import org.apache.ibatis.annotations.Update;
+
+@Mapper
+public interface UserMapper {
+
+    // ... 其他方法 ...
+
+    /**
+     * 根据 ID 更新用户信息
+     * @param user 包含新信息和ID的用户对象
+     * @return 受影响的行数
+     */
+    @Update("UPDATE users SET username=#{username}, email=#{email}, age=#{age} WHERE id=#{id}")
+    int update(User user);
+}
+```
+
+D. **`DELETE` (删 - Delete)**
+
+使用 `@Delete` 注解。
+
+```java
+import org.apache.ibatis.annotations.Delete;
+
+@Mapper
+public interface UserMapper {
+
+    // ... 其他方法 ...
+
+    /**
+     * 根据 ID 删除用户
+     * @param id 用户ID
+     * @return 受影响的行数
+     */
+    @Delete("DELETE FROM users WHERE id = #{id}")
+    int deleteById(Integer id);
+}
+```
+
+现在，你的 `UserMapper.java` 接口就拥有了完整的增删改查功能，并且完全不需要任何 XML 文件！
+
+---
+
+3. **注解 vs. XML, 我该用哪个？**
+
+这是一个非常经典的问题。它们各有优缺点，最佳实践通常是**混合使用**。
+
+| 对比维度 | 注解方式 (Annotations)                                       | XML 方式                                                     |
+| -------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| **优点** | **简单直观**：对于简单SQL，代码和SQL在一起，一目了然。<br>**无需XML**：减少文件数量和切换成本。<br>**IDE支持好**：方便跳转和重构。 | **复杂SQL的王者**：支持强大的**动态SQL**（`<if>`, `<foreach>`等），这是注解方式难以比拟的。<br>**职责分离**：SQL和Java代码完全解耦，方便DBA审查和优化SQL。<br>**可读性**：长SQL在XML中格式更清晰。 |
+| **缺点** | **不适合复杂SQL**：在Java字符串里写复杂的动态SQL是一场噩梦。<br>**代码耦合**：SQL和Java代码耦合在一起。 | **更繁琐**：对于简单SQL，需要额外创建一个XML文件，显得笨重。<br>**不易重构**：修改方法名时，需要手动同步修改XML中的ID。 |
+
+**小橘的建议 🐾：**
+
+1. **对于简单的、静态的 CRUD 操作**：**优先使用注解**。比如简单的 `findById`, `findAll`, `insert`, `updateById`, `deleteById`。这样可以大大减少项目中的 XML 文件数量，让代码更简洁。
+2. **对于复杂的、包含业务逻辑的、需要动态拼接的 SQL 查询**：**果断使用 XML**。比如，一个复杂的多条件搜索（用户可能传入了用户名，也可能传入了邮箱，还可能传入了时间范围），使用 XML 的 `<if>` 标签来动态构建 `WHERE` 子句会非常清晰和强大。
+
+**最棒的是，你可以在同一个项目中混合使用它们！** MyBatis 非常聪明，对于一个 Mapper 接口（比如 `UserMapper`），它会先查找是否有注解定义的 SQL。如果找不到，它会自动去对应的 XML 文件（`UserMapper.xml`）中查找同名 `id` 的 SQL。你完全可以在接口中，一部分简单方法用注解实现，另一部分复杂方法在 XML 中实现。
+
+---
+
+**ice 的笔记**
+
+如果需要开启 mybatis 的日志输出，则需要在 application.properties 下面加上这一行：
+
+```properties
+mybatis.configuration.log-impl=org.apache.ibatis.logging.stdout.StdOutImpl
+```
+
+
+
+
+
 ## MySQL 篇
 
-### 1. MySQL 的数据类型与约束关键词
+### 1. MySQL 的数据类型与约束
 
 **为什么选择正确的数据类型很重要？** 这就像整理房间，小饰品要放小盒子里，冬天的被子要放进大储物箱。选对了“盒子”（数据类型），不仅能**节省存储空间**，还能**保证数据的正确性**（比如防止把文字存进数字列），并**提升查询效率**。
 
@@ -8959,7 +9576,7 @@ CREATE TABLE users (
 - **比喻**：主键就是每个人的身份证号，既不能没有，也不能和别人重复，是找到这个人的最关键信息。
 - **用法**：
 
-```java
+```sql
 CREATE TABLE users (
     id INT PRIMARY KEY AUTO_INCREMENT, -- 将 id 设为主键，并且让它自动增长
     username VARCHAR(50) NOT NULL,
@@ -8979,7 +9596,7 @@ CREATE TABLE users (
   - 外键约束确保了 `orders` 表里的每一个 `student_id`，都必须能在 `students` 表的 `id` 列中找到对应。
 - **用法**：
 
-```java
+```sql
 -- 先创建主表：学生表
 CREATE TABLE students (
     id INT PRIMARY KEY AUTO_INCREMENT,
@@ -9153,6 +9770,173 @@ SELECT * FROM users WHERE username = '小橘';
 ```sql
 SELECT * FROM users ORDER BY created_at DESC;
 ```
+
+---
+
+我们已经知道，DQL (数据查询语言) 的核心是 `SELECT` 命令。但一个简单的 `SELECT * FROM table;` 就像是让图书管理员把整个书架的书都搬出来，非常笨拙。
+
+在实际项目中，我们总是需要更精确地查询，比如“只找价格低于500的书”、“把书按价格从高到低排好”、“统计每个出版社有多少本书”以及“我只想看第一页的10本书”。要实现这些精准操作，我们就必须掌握 `SELECT` 语句的四大核心“子句”：**条件查询 (`WHERE`)**、**排序查询 (`ORDER BY`)**、**分组查询 (`GROUP BY`)** 和 **分页查询 (`LIMIT`)**。
+
+------
+
+为了方便演示，我们先假设有一个这样的 `products` 商品表：
+
+| id   | product_name   | category | price    | stock_quantity | launch_date |
+| ---- | -------------- | -------- | -------- | -------------- | ----------- |
+| 1    | iPhone 15 Pro  | 手机     | 7999.00  | 100            | 2023-09-15  |
+| 2    | Mate 60 Pro    | 手机     | 6999.00  | 80             | 2023-09-01  |
+| 3    | MacBook Pro 14 | 电脑     | 15999.00 | 50             | 2023-10-30  |
+| 4    | ThinkPad X1    | 电脑     | 12999.00 | 60             | 2023-05-20  |
+| 5    | 小米充电宝     | 配件     | 99.00    | 500            | 2022-01-01  |
+| 6    | 华为无线耳机   | 配件     | 799.00   | 200            | 2023-08-10  |
+
+---
+
+1. **条件查询 (Conditional Query) - `WHERE` 子句**
+
+`WHERE` 是 SQL 查询的“过滤器”，它允许你根据指定的条件，筛选出你真正想要的那些**数据行**。
+
+A. **常用操作符**
+
+- **比较操作符**: `=`, `<>`, `!=`, `>`, `<`, `>=`, `<=`
+
+  ```sql
+  -- 查询价格大于 7000 元的商品
+  SELECT * FROM products WHERE price > 7000;
+  ```
+  
+- **逻辑操作符**: `AND`, `OR`, `NOT`
+
+  ```sql
+  -- 查询类别是'手机' 并且 价格小于 7000 的商品
+  SELECT * FROM products WHERE category = '手机' AND price < 7000;
+  ```
+  
+- **范围操作符**: `BETWEEN ... AND ...`, `IN (...)`, `NOT IN (...)`
+
+  ```sql
+  -- 查询价格在 1000 到 10000 元之间的商品
+  SELECT * FROM products WHERE price BETWEEN 1000 AND 10000;
+  
+  -- 查询类别是'手机'或'电脑'的商品
+  SELECT * FROM products WHERE category IN ('手机', '电脑');
+  ```
+  
+- **模糊查询**: `LIKE` `%` 代表零个或多个任意字符，`_` 代表一个任意字符。
+
+  ```sql
+  -- 查询商品名以 'iPhone' 开头的所有商品
+  SELECT * FROM products WHERE product_name LIKE 'iPhone%';
+  ```
+  
+- **空值判断**: `IS NULL`, `IS NOT NULL`
+
+  ```sql
+  -- 查询上市日期不为空的商品
+  SELECT * FROM products WHERE launch_date IS NOT NULL;
+  ```
+
+---
+
+2. 排序查询 (Sorting Query) - `ORDER BY` 子句
+
+`ORDER BY` 负责将查询出来的结果集，按照你指定的顺序进行**排序**。
+
+- **`ASC`**: 升序 (Ascending)，从小到大，这是默认值。
+- **`DESC`**: 降序 (Descending)，从大到小。
+
+```sql
+-- 查询所有商品，并按价格从高到低排序
+SELECT * FROM products ORDER BY price DESC;
+
+-- 也可以多字段排序：先按类别升序，如果类别相同，再按价格降序
+SELECT * FROM products ORDER BY category ASC, price DESC;
+```
+
+---
+
+3. **分组查询 (Grouping Query) - `GROUP BY` 与 `HAVING` 子句**
+
+分组查询非常强大，它不再是简单地展示一行行的数据，而是对数据进行**聚合统计**。它回答的是“每组xxx的xxx是多少”这类问题。
+
+`GROUP BY` 通常和**聚合函数**一起使用：
+
+- `COUNT()`: 计数
+- `SUM()`: 求和
+- `AVG()`: 求平均值
+- `MAX()`: 求最大值
+- `MIN()`: 求最小值
+
+A. **`GROUP BY`**
+
+```sql
+-- 统计每个商品类别下分别有多少个商品
+SELECT category, COUNT(*) FROM products GROUP BY category;
+```
+
+**执行过程**：MySQL 会先根据 `category` 字段的值（'手机', '电脑', '配件'）把所有数据分成三组，然后分别在每组内部使用 `COUNT(*)` 进行计数。
+
+**输出结果**： 
+
+| category | COUNT(*) | 
+|---|---| 
+| 手机 | 2 | 
+| 电脑 | 2 | 
+| 配件 | 2 |
+
+B. **`HAVING` - 对分组后的结果进行过滤**
+
+`WHERE` 是在**分组前**对原始数据进行过滤，而 `HAVING` 是在**分组后**对聚合结果进行过滤。
+
+```sql
+-- 统计每个商品类别下商品的平均价格，并且只显示平均价格大于 1000 元的类别
+SELECT category, AVG(price) AS avg_price
+FROM products
+GROUP BY category
+HAVING avg_price > 1000;
+```
+
+**执行过程**：先按类别分组，计算出每组的平均价，然后 `HAVING` 子句会过滤掉平均价不大于1000的分组（比如“配件”组）。
+
+---
+
+4. **分页查询 (Pagination Query) - `LIMIT` 子句**
+
+当查询结果有成千上万条时，一次性全部展示给用户是不现实的。分页查询就是为了解决这个问题，每次只取出一“页”的数据。
+
+`LIMIT` 有两种用法：
+
+- `LIMIT count`: 只返回前 `count` 条记录。
+- `LIMIT offset, count`: 跳过 `offset` 条记录，然后返回接下来的 `count` 条记录。
+
+```sql
+-- 查询价格最贵的前3个商品
+SELECT * FROM products ORDER BY price DESC LIMIT 3;
+
+-- 分页查询：假设每页显示2条，查询第2页的数据
+-- 第1页: LIMIT 0, 2
+-- 第2页: LIMIT 2, 2  (跳过 (2-1)*2 = 2 条，取2条)
+-- 第3页: LIMIT 4, 2
+SELECT * FROM products LIMIT 2, 2;
+```
+
+分页查询的 `LIMIT` 通常和 `ORDER BY` 结合使用，以保证每次查询的分页顺序是稳定的。
+
+---
+
+**SQL 查询的执行顺序（逻辑上）**
+
+虽然我们写的顺序是 `SELECT ... FROM ... WHERE ... GROUP BY ... HAVING ... ORDER BY ... LIMIT ...`，但数据库在**逻辑上**的执行顺序是这样的：
+
+1. **`FROM`**: 确定要操作的表。
+2. **`WHERE`**: 过滤原始数据。
+3. **`GROUP BY`**: 将数据分组。
+4. **`HAVING`**: 过滤分组后的结果。
+5. **`SELECT`**: 选取要显示的列。
+6. **`ORDER BY`**: 对最终结果进行排序。
+7. **`LIMIT`**: 从排序后的结果中截取指定的行。
+
+理解这个顺序，有助于你写出更高效、更正确的 SQL 查询。
 
 
 
